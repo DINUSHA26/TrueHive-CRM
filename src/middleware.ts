@@ -4,10 +4,12 @@ import { verifyJwtToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Static assets & next internal files
+  // 1. Static assets & next internal files & public legal pages
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms") ||
     pathname.includes(".")
   ) {
     return NextResponse.next();
