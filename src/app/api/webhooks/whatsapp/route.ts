@@ -20,7 +20,14 @@ export async function GET(req: NextRequest) {
   const expectedToken = process.env.WHATSAPP_VERIFY_TOKEN || "truehive_webhook_verify_token_2026";
   if (mode === "subscribe" && token === expectedToken) {
     console.log("[WhatsApp Webhook]: Hub challenge verified successfully!");
-    return new NextResponse(challenge, { status: 200 });
+    return new NextResponse(challenge, {
+      status: 200,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
+
+  if (mode === "subscribe") {
+    return new NextResponse("Forbidden", { status: 403 });
   }
 
   return NextResponse.json({ status: "WhatsApp Webhook Active" }, { status: 200 });

@@ -14,7 +14,7 @@ export async function sendWhatsAppMessage(params: {
   }
 
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
   const version = process.env.WHATSAPP_API_VERSION || "v21.0";
 
   if (!phoneId || !token || phoneId === "your_phone_number_id") {
