@@ -1,0 +1,246 @@
+"use client";
+
+import React, { useEffect, useState, useCallback } from "react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import type { NavKey } from "@/components/layout/Sidebar";
+import { OverviewView } from "@/components/views/OverviewView";
+import { WhatsAppChatView } from "@/components/views/WhatsAppChatView";
+import { CrmView, type CustomerRecord } from "@/components/views/CrmView";
+import { LeadsView } from "@/components/views/LeadsView";
+import { AnnouncementsView } from "@/components/views/AnnouncementsView";
+import { PosPanelView } from "@/components/views/PosPanelView";
+import { ProductInventoryView } from "@/components/views/ProductInventoryView";
+import { OrderManagementView } from "@/components/views/OrderManagementView";
+import { SupplierManagementView } from "@/components/views/SupplierManagementView";
+import { CashFlowView } from "@/components/views/CashFlowView";
+import { ReportsView } from "@/components/views/ReportsView";
+import { SettingsView } from "@/components/views/SettingsView";
+import { OfficialA4InvoiceModal } from "@/components/OfficialA4InvoiceModal";
+import type {
+  ProductItem,
+  IngredientItem,
+  LeadItem,
+  OrderRecord,
+  ChatThread,
+  SupplierRecord,
+  CashFlowRecord,
+} from "@/lib/store";
+
+export default function TrueHiveWorkspace() {
+  const [activeNav, setActiveNav] = useState<NavKey>("OVERVIEW");
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
+  const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [chats, setChats] = useState<ChatThread[]>([]);
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
+  const [orders, setOrders] = useState<OrderRecord[]>([]);
+  const [cashflow, setCashflow] = useState<CashFlowRecord[]>([]);
+  const [googleSyncHistory, setGoogleSyncHistory] = useState<any[]>([]);
+  const [overviewStats, setOverviewStats] = useState({
+    totalRevenue: 0,
+    totalCogs: 0,
+    totalOrders: 0,
+    pendingOrdersCount: 0,
+    avgOrder: 0,
+    totalProducts: 0,
+    lowStockCount: 0,
+    totalCustomers: 0,
+    totalLeads: 0,
+    unreadChats: 0,
+    escalatedChats: 0,
+  });
+
+  const [currentUser, setCurrentUser] = useState<{ name: string; role: string }>({
+    name: "Administrator",
+    role: "Super Admin",
+  });
+  const [selectedA4Order, setSelectedA4Order] = useState<OrderRecord | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch all real live data from PostgreSQL endpoints
+  const fetchAllData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const [overRes, invRes, crmRes, ordRes, finRes] = await Promise.all([
+        fetch("/api/overview").catch(() => null),
+        fetch("/api/inventory").catch(() => null),
+        fetch("/api/crm").catch(() => null),
+        fetch("/api/orders").catch(() => null),
+        fetch("/api/finance").catch(() => null),
+      ]);
+
+      if (overRes?.ok) {
+        const overData = await overRes.json();
+        if (overData.stats) setOverviewStats(overData.stats);
+      }
+
+      if (invRes?.ok) {
+        const invData = await invRes.json();
+        if (invData.products) setProducts(invData.products);
+        if (invData.ingredients) setIngredients(invData.ingredients);
+        if (invData.suppliers) setSuppliers(invData.suppliers);
+      }
+
+      if (crmRes?.ok) {
+        const crmData = await crmRes.json();
+        if (crmData.leads) setLeads(crmData.leads);
+        if (crmData.chats) setChats(crmData.chats);
+        if (crmData.customers) setCustomers(crmData.customers);
+      }
+
+      if (ordRes?.ok) {
+        const ordData = await ordRes.json();
+        if (ordData.orders) setOrders(ordData.orders);
+      }
+
+      if (finRes?.ok) {
+        const finData = await finRes.json();
+        if (finData.cashflow) setCashflow(finData.cashflow);
+        if (finData.googleSyncHistory) setGoogleSyncHistory(finData.googleSyncHistory);
+      }
+    } catch (err) {
+      console.error("Failed to load real database records:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllData();
+    try {
+      const savedUser = localStorage.getItem("truehive_user");
+      if (savedUser) {
+        setCurrentUser(JSON.parse(savedUser));
+      }
+    } catch {
+      // Ignore
+    }
+  }, [fetchAllData]);
+
+  // Dynamic badges
+  const unreadChatsCount =
+    overviewStats.unreadChats || chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+  const pendingOrdersCount =
+    overviewStats.pendingOrdersCount || orders.filter((o) => o.status === "PENDING").length;
+  const lowStockCount =
+    overviewStats.lowStockCount ||
+    products.filter((p) => p.currentStock <= (p.reorderLevel || 10)).length;
+
+  return (
+    <DashboardLayout
+      activeNav={activeNav}
+      onSelectNav={setActiveNav}
+      onRefresh={fetchAllData}
+      isRefreshing={isRefreshing}
+      badges={{
+        whatsappChat: unreadChatsCount,
+        orderManagement: pendingOrdersCount,
+      }}
+      currentUser={currentUser}
+      lowStockCount={lowStockCount}
+      onLogout={async () => {
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+        } catch {
+          // Ignore
+        }
+        try {
+          localStorage.removeItem("truehive_user");
+          sessionStorage.removeItem("truehive_user");
+        } catch {}
+        window.location.href = "/login";
+      }}
+    >
+      {/* View router */}
+      {activeNav === "OVERVIEW" && (
+        <OverviewView
+          stats={overviewStats}
+          recentOrders={orders}
+          products={products}
+          ingredients={ingredients}
+          onNavigate={setActiveNav}
+          onOpenA4Invoice={setSelectedA4Order}
+        />
+      )}
+
+      {activeNav === "WHATSAPP_CHAT" && (
+        <WhatsAppChatView chats={chats} onRefresh={fetchAllData} />
+      )}
+
+      {activeNav === "CRM" && (
+        <CrmView
+          customers={customers}
+          onRefresh={fetchAllData}
+          onNavigate={setActiveNav}
+        />
+      )}
+
+      {activeNav === "LEADS" && (
+        <LeadsView leads={leads} onRefresh={fetchAllData} />
+      )}
+
+      {activeNav === "ANNOUNCEMENTS" && (
+        <AnnouncementsView onRefresh={fetchAllData} />
+      )}
+
+      {activeNav === "POS_PANEL" && (
+        <PosPanelView
+          products={products}
+          ingredients={ingredients}
+          onRefresh={fetchAllData}
+          onOpenA4Invoice={setSelectedA4Order}
+        />
+      )}
+
+      {activeNav === "PRODUCT_INVENTORY" && (
+        <ProductInventoryView
+          products={products}
+          ingredients={ingredients}
+          suppliers={suppliers}
+          onRefresh={fetchAllData}
+        />
+      )}
+
+      {activeNav === "ORDER_MANAGEMENT" && (
+        <OrderManagementView
+          orders={orders}
+          onRefresh={fetchAllData}
+          onOpenA4Invoice={setSelectedA4Order}
+        />
+      )}
+
+      {activeNav === "SUPPLIER_MANAGEMENT" && (
+        <SupplierManagementView
+          suppliers={suppliers}
+          ingredients={ingredients}
+          onRefresh={fetchAllData}
+        />
+      )}
+
+      {activeNav === "CASH_FLOW" && (
+        <CashFlowView cashflow={cashflow} onRefresh={fetchAllData} />
+      )}
+
+      {activeNav === "REPORTS" && (
+        <ReportsView
+          totalRevenue={overviewStats.totalRevenue}
+          totalOrders={overviewStats.totalOrders}
+          totalCustomers={customers.length || overviewStats.totalCustomers}
+          syncHistory={googleSyncHistory}
+          onRefresh={fetchAllData}
+        />
+      )}
+
+      {activeNav === "SETTINGS" && (
+        <SettingsView currentUser={currentUser} onRefresh={fetchAllData} />
+      )}
+
+      {/* Global Official A4 Tax Invoice Modal */}
+      <OfficialA4InvoiceModal
+        order={selectedA4Order}
+        onClose={() => setSelectedA4Order(null)}
+      />
+    </DashboardLayout>
+  );
+}

@@ -1,0 +1,540 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==========================================
+// 1. AUTHENTICATION & RBAC
+// ==========================================
+
+enum RoleType {
+  SUPER_ADMIN
+  MANAGER
+  CASHIER_POS
+  SUPPORT_AGENT
+  INVENTORY_STAFF
+  ACCOUNTANT
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  phone        String?
+  passwordHash String
+  role         RoleType      @default(SUPPORT_AGENT)
+  permissions  Json?         // Granular module permissions array
+  fcmToken     String?       // Firebase Cloud Messaging token for push notifications
+  isActive     Boolean       @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  sessions     UserSession[]
+  assignedLeads Lead[]       @relation("AssignedAgentLeads")
+  assignedChats ChatRoom[]   @relation("AssignedAgentChats")
+}
+
+model UserSession {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// 2. CUSTOMERS & LEADS CRM (GenLead SL Style)
+// ==========================================
+
+enum LeadStage {
+  NEW
+  CONTACTED
+  SCHEDULED
+  COMPLETED
+  LOST
+}
+
+enum LeadIntent {
+  HIGH_INTENT
+  ENGAGED
+  EXPLORING
+  URGENT_ESCALATION
+}
+
+model Customer {
+  id           String     @id @default(cuid())
+  name         String
+  phone        String     @unique
+  whatsappId   String?    @unique
+  email        String?
+  address      String?
+  city         String?
+  totalOrders  Int        @default(0)
+  totalSpent   Float      @default(0)
+  segment      String     @default("REGULAR") // VIP, REPEAT, REGULAR, NEW
+  zohoSyncedAt DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  leads        Lead[]
+  chatRooms    ChatRoom[]
+  orders       Order[]
+}
+
+model Lead {
+  id                 String         @id @default(cuid())
+  customerId         String?
+  customerName       String
+  phone              String
+  town               String?
+  stage              LeadStage      @default(NEW)
+  intent             LeadIntent     @default(EXPLORING)
+  issueSummary       String         // AI-extracted summary of requirement
+  businessType       String?        // AI-extracted dynamic field
+  dailyMessageVolume String?        // AI-extracted dynamic field
+  needsMediaSupport  Boolean        @default(false)
+  customFields       Json?          // Additional AI-extracted key-value pairs
+  nextFollowUpAt     DateTime?
+  assignedAgentId    String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  customer           Customer?      @relation(fields: [customerId], references: [id])
+  assignedAgent      User?          @relation("AssignedAgentLeads", fields: [assignedAgentId], references: [id])
+  callNotes          LeadCallNote[]
+
+  @@index([stage])
+  @@index([intent])
+  @@index([nextFollowUpAt])
+}
+
+model LeadCallNote {
+  id         String   @id @default(cuid())
+  leadId     String
+  authorName String
+  note       String
+  createdAt  DateTime @default(now())
+
+  lead       Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// 3. WHATSAPP LIVE CHAT & HUMAN HANDOVER
+// ==========================================
+
+enum HandoverStatus {
+  AI_ACTIVE
+  HUMAN_HANDOVER
+  URGENT_ESCALATION
+  RESOLVED
+}
+
+model ChatRoom {
+  id              String         @id @default(cuid())
+  customerId      String?
+  whatsappPhone   String         @unique
+  customerName    String
+  isAiActive      Boolean        @default(true)
+  handoverStatus  HandoverStatus @default(AI_ACTIVE)
+  escalationReason String?
+  assignedAgentId String?
+  unreadCount     Int            @default(0)
+  lastMessageText String?
+  lastMessageAt   DateTime       @default(now())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  customer        Customer?      @relation(fields: [customerId], references: [id])
+  assignedAgent   User?          @relation("AssignedAgentChats", fields: [assignedAgentId], references: [id])
+  messages        ChatMessage[]
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  chatRoomId  String
+  waMessageId String?  @unique
+  direction   String   // INBOUND, OUTBOUND
+  senderType  String   // CUSTOMER, AI_BOT, HUMAN_AGENT, SYSTEM
+  messageType String   @default("TEXT") // TEXT, AUDIO, IMAGE, DOCUMENT, TEMPLATE
+  content     String
+  mediaUrl    String?  // Cloudinary URL for voice notes, images, payment slips
+  aiToolCalls Json?    // Trace of tools executed by Gemini Agentic Loop
+  createdAt   DateTime @default(now())
+
+  chatRoom    ChatRoom @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  @@index([chatRoomId, createdAt])
+}
+
+// ==========================================
+// 4. PRODUCTS, BARCODES & BOM INGREDIENTS
+// ==========================================
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  description String?
+  image       String?
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    Category[] @relation("CategoryHierarchy")
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @default(now()) @updatedAt
+
+  products    Product[]
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Product {
+  id             String                 @id @default(cuid())
+  name           String
+  slug           String                 @unique
+  sku            String                 @unique
+  barcode        String                 @unique // CODE128 / EAN13 barcode
+  categoryId     String?
+  description    String?
+  imageUrl       String?
+  images         Json?                  // Array of image objects [{ url, altText, position }]
+  sellingPrice   Float
+  discountPrice  Float?                 // Compare at price
+  calculatedCogs Float                  @default(0) // Auto-calculated from BOM ingredients or manual purchase cost
+  currentStock   Float                  @default(0)
+  reservedStock  Float                  @default(0)
+  reorderLevel   Float                  @default(5)
+  unit           String                 @default("pcs")
+  trackBom       Boolean                @default(false) // Deduct BOM ingredients on PROCESSING
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  category       Category?              @relation(fields: [categoryId], references: [id])
+  variants       ProductVariant[]
+  bomItems       ProductIngredientBOM[]
+  orderItems     OrderItem[]
+  stockMovements StockMovement[]
+}
+
+model ProductVariant {
+  id              String      @id @default(cuid())
+  productId       String
+  name            String      // e.g. "Size / Color", "1kg", "XL"
+  value           String?     // e.g. "XL / Blue", "1kg"
+  sku             String      @unique
+  barcode         String      @unique
+  sellingPrice    Float
+  priceAdjustment Float?      @default(0)
+  currentStock    Float       @default(0)
+  image           String?
+  createdAt       DateTime    @default(now())
+
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems      OrderItem[]
+}
+
+model Ingredient {
+  id             String                 @id @default(cuid())
+  name           String
+  sku            String                 @unique
+  barcode        String?                @unique
+  unit           String                 @default("kg") // kg, g, L, ml, pcs, m
+  currentStock   Float                  @default(0)
+  reorderLevel   Float                  @default(5)
+  unitCost       Float                  @default(0)    // Cost per unit in LKR
+  supplierId     String?
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  supplier       Supplier?              @relation(fields: [supplierId], references: [id])
+  bomUsages      ProductIngredientBOM[]
+  stockMovements StockMovement[]
+  poItems        PurchaseOrderItem[]
+}
+
+model ProductIngredientBOM {
+  id               String     @id @default(cuid())
+  productId        String
+  ingredientId     String
+  quantityRequired Float      // Quantity of ingredient needed per 1 unit of Product
+  wastagePercent   Float      @default(0)
+  notes            String?
+
+  product          Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, ingredientId])
+}
+
+enum StockMovementType {
+  PURCHASE_GRN
+  POS_SALE
+  ORDER_PROCESSING_BOM
+  MANUAL_ADJUSTMENT
+  WASTAGE
+  RETURN
+}
+
+model StockMovement {
+  id             String            @id @default(cuid())
+  productId      String?
+  ingredientId   String?
+  type           StockMovementType
+  quantityChange Float             // Negative for deduction, Positive for addition
+  balanceAfter   Float
+  unitCost       Float             @default(0)
+  referenceId    String?           // Order Number or GRN Number
+  notes          String?
+  createdBy      String?
+  createdAt      DateTime          @default(now())
+
+  product        Product?          @relation(fields: [productId], references: [id])
+  ingredient     Ingredient?       @relation(fields: [ingredientId], references: [id])
+}
+
+// ==========================================
+// 5. SUPPLIERS, PURCHASE ORDERS (PO) & GRN
+// ==========================================
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  contactPerson  String?
+  phone          String
+  email          String?
+  address        String?
+  creditBalance  Float           @default(0) // Amount owed to supplier
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  ingredients    Ingredient[]
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id           String              @id @default(cuid())
+  poNumber     String              @unique
+  supplierId   String
+  status       String              @default("DRAFT") // DRAFT, SENT, PARTIAL_GRN, COMPLETED, CANCELLED
+  totalAmount  Float               @default(0)
+  paidAmount   Float               @default(0)
+  notes        String?
+  expectedDate DateTime?
+  receivedAt   DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  supplier     Supplier            @relation(fields: [supplierId], references: [id])
+  items        PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id               String        @id @default(cuid())
+  purchaseOrderId  String
+  ingredientId     String?
+  itemName         String
+  quantityOrdered  Float
+  quantityReceived Float         @default(0)
+  unitCost         Float
+  totalCost        Float
+
+  purchaseOrder    PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient?   @relation(fields: [ingredientId], references: [id])
+}
+
+// ==========================================
+// 6. ORDERS, POS & INVOICING
+// ==========================================
+
+enum OrderSource {
+  WHATSAPP_AI
+  POS_TERMINAL
+  MANUAL_DASHBOARD
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  READY_TO_SHIP
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  BANK_TRANSFER
+  COD
+  SPLIT
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  VERIFYING_SLIP
+  REFUNDED
+}
+
+model Order {
+  id               String               @id @default(cuid())
+  orderNumber      String               @unique // e.g. #ORD-2501 or #POS-1001
+  barcode          String               @unique
+  customerId       String?
+  customerName     String
+  customerPhone    String
+  shippingAddress  String?
+  source           OrderSource          @default(WHATSAPP_AI)
+  status           OrderStatus          @default(PENDING)
+  paymentMethod    PaymentMethod        @default(COD)
+  paymentStatus    PaymentStatus        @default(UNPAID)
+  subtotal         Float
+  discountAmount   Float                @default(0)
+  taxAmount        Float                @default(0)
+  deliveryFee      Float                @default(0)
+  totalAmount      Float
+  totalCogs        Float                @default(0) // Total cost of goods & BOM ingredients
+  cashReceived     Float?
+  changeGiven      Float?
+  bomDeducted      Boolean              @default(false) // Set true when status hits PROCESSING or POS sale
+  bomDeductedAt    DateTime?
+  slipImageUrl     String?              // Cloudinary URL for bank transfer receipt
+  slipVerifiedByAi Boolean              @default(false)
+  notes            String?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  customer         Customer?            @relation(fields: [customerId], references: [id])
+  items            OrderItem[]
+  statusHistory    OrderStatusHistory[]
+
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String          @id @default(cuid())
+  orderId     String
+  productId   String
+  variantId   String?
+  productName String
+  sku         String
+  barcode     String
+  quantity    Float
+  unitPrice   Float
+  unitCogs    Float           @default(0)
+  discount    Float           @default(0)
+  totalPrice  Float
+
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product         @relation(fields: [productId], references: [id])
+  variant     ProductVariant? @relation(fields: [variantId], references: [id])
+}
+
+model OrderStatusHistory {
+  id           String      @id @default(cuid())
+  orderId      String
+  status       OrderStatus
+  note         String?
+  whatsappSent Boolean     @default(false)
+  updatedBy    String?
+  createdAt    DateTime    @default(now())
+
+  order        Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// ==========================================
+// 7. CASH FLOW & FINANCIAL MANAGEMENT
+// ==========================================
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  SUPPLIER_PAYMENT
+  COGS_RECOGNITION
+  SALARY
+  MARKETING
+}
+
+model FinancialAccount {
+  id            String                @id @default(cuid())
+  name          String                // e.g. "Main Cash Drawer", "Commercial Bank", "COD Pending Wallet"
+  type          String                // CASH_DRAWER, BANK_ACCOUNT, COD_WALLET
+  balance       Float                 @default(0)
+  accountNumber String?
+  bankName      String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  transactions  CashFlowTransaction[]
+}
+
+model CashFlowTransaction {
+  id               String            @id @default(cuid())
+  transactionCode  String            @unique
+  accountId        String?
+  type             TransactionType
+  category         String            // POS_SALE, WHATSAPP_ORDER, RAW_MATERIAL_PO, UTILITY, RENT, SALARY, AD_SPEND
+  amount           Float
+  description      String
+  referenceOrderId String?
+  referencePoId    String?
+  paymentMethod    String            @default("CASH")
+  receiptUrl       String?
+  recordedBy       String?
+  transactionDate  DateTime          @default(now())
+  createdAt        DateTime          @default(now())
+
+  account          FinancialAccount? @relation(fields: [accountId], references: [id])
+
+  @@index([type, transactionDate])
+}
+
+// ==========================================
+// 8. LIVE GOOGLE DOCS / SHEETS & MARKETING
+// ==========================================
+
+model GoogleReportSync {
+  id            String   @id @default(cuid())
+  reportTitle   String
+  reportType    String   // DAILY_SUMMARY, MONTHLY_PNL, INVENTORY_BOM_AUDIT
+  googleDocId   String?
+  googleSheetId String?
+  docUrl        String?
+  sheetUrl      String?
+  aiNarrative   String?
+  syncStatus    String   @default("SUCCESS")
+  lastSyncedAt  DateTime @default(now())
+}
+
+model MarketingCampaign {
+  id              String   @id @default(cuid())
+  name            String
+  channel         String   // WHATSAPP_BROADCAST, ZOHO_CAMPAIGN, RESEND_EMAIL
+  targetSegment   String   // ALL, HIGH_INTENT, VIP, OVERDUE_LEADS
+  messageTemplate String
+  totalRecipients Int      @default(0)
+  sentCount       Int      @default(0)
+  status          String   @default("COMPLETED")
+  createdAt       DateTime @default(now())
+}
+
