@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
 import { syncContactToZohoCampaigns } from "@/lib/email";
+import { getStore } from "@/lib/store";
 
 export async function GET(req: NextRequest) {
   try {
@@ -24,7 +25,7 @@ export async function GET(req: NextRequest) {
       prisma.chatRoom.findMany({
         include: {
           messages: {
-            take: 20,
+            take: 40,
             orderBy: { createdAt: "asc" },
           },
           customer: true,
@@ -33,15 +34,50 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
+    const formattedChats = (chatRooms || []).map((room) => ({
+      id: room.id,
+      customerName: room.customerName || room.customer?.name || room.whatsappPhone,
+      whatsappPhone: room.whatsappPhone,
+      isAiActive: room.isAiActive,
+      handoverStatus: (room.handoverStatus || "AI_ACTIVE") as "AI_ACTIVE" | "HUMAN_HANDOVER" | "URGENT_ESCALATION",
+      unreadCount: room.unreadCount || 0,
+      lastMessageText: room.lastMessageText || "",
+      lastMessageAt: room.lastMessageAt
+        ? new Date(room.lastMessageAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        : "Just now",
+      messages: (room.messages || []).map((m) => ({
+        id: m.id,
+        direction: (m.direction || "INBOUND") as "INBOUND" | "OUTBOUND",
+        senderType: (m.senderType || "CUSTOMER") as "CUSTOMER" | "AI_BOT" | "HUMAN_AGENT" | "SYSTEM",
+        messageType: (m.messageType || "TEXT") as "TEXT" | "AUDIO" | "IMAGE" | "INVOICE",
+        content: m.content || "",
+        toolCalls: Array.isArray(m.aiToolCalls) ? (m.aiToolCalls as string[]) : [],
+        timestamp: m.createdAt
+          ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          : "Just now",
+      })),
+    }));
+
+    const storeChats = getStore().chats;
+    const finalChats = formattedChats.length > 0 ? formattedChats : storeChats;
+
     return NextResponse.json({
       success: true,
       leads,
       customers,
-      chatRooms,
+      chats: finalChats,
+      chatRooms: finalChats,
     });
   } catch (error) {
     console.error("[CRM GET Error]:", error);
-    return NextResponse.json({ error: "Failed to fetch CRM data from database" }, { status: 500 });
+    const store = getStore();
+    return NextResponse.json({
+      success: true,
+      leads: store.leads,
+      customers: [],
+      chats: store.chats,
+      chatRooms: store.chats,
+    });
   }
 }
 
