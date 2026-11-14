@@ -54,7 +54,7 @@ export default function LoginPage() {
         sessionStorage.setItem("truehive_user", JSON.stringify(data.user));
       }
 
-      router.push("/");
+      window.location.href = "/";
     } catch {
       setError("සම්බන්ධතා දෝෂයක් ඇති විය. කරුණාකර ජාල සම්බන්ධතාව පරීක්ෂා කරන්න.");
       setLoading(false);

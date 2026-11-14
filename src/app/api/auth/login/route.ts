@@ -3,7 +3,12 @@ import { signJwtToken, AUTH_COOKIE_NAME, RoleType, ROLE_PERMISSIONS } from "@/li
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+const configuredAdminEmail = (process.env.ADMIN_EMAIL || "admin@truehive.lk").toLowerCase();
+const configuredAdminPass = process.env.ADMIN_PASSWORD || "admin123";
+const configuredAdminName = process.env.ADMIN_NAME || "Super Admin";
+
 const FALLBACK_USERS: Record<string, { id: string; name: string; role: RoleType; pass: string }> = {
+  [configuredAdminEmail]: { id: "u-1", name: configuredAdminName, role: "SUPER_ADMIN", pass: configuredAdminPass },
   "admin@truehive.lk": { id: "u-1", name: "Super Admin", role: "SUPER_ADMIN", pass: "admin123" },
   "manager@truehive.lk": { id: "u-2", name: "Store Manager", role: "MANAGER", pass: "admin123" },
   "cashier@truehive.lk": { id: "u-3", name: "POS Cashier", role: "CASHIER_POS", pass: "admin123" },

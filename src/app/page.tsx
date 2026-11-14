@@ -107,15 +107,36 @@ export default function TrueHiveWorkspace() {
   }, []);
 
   useEffect(() => {
-    fetchAllData();
-    try {
-      const savedUser = localStorage.getItem("truehive_user");
-      if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
+    let isMounted = true;
+    const verifyAuthAndLoad = async () => {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.authenticated && meData.user) {
+            if (isMounted) {
+              setCurrentUser({
+                name: meData.user.name || "Administrator",
+                role: meData.user.role || "Super Admin",
+              });
+              fetchAllData();
+            }
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Auth check error:", e);
       }
-    } catch {
-      // Ignore
-    }
+
+      // If unauthenticated, redirect to login
+      window.location.href = "/login";
+    };
+
+    verifyAuthAndLoad();
+
+    return () => {
+      isMounted = false;
+    };
   }, [fetchAllData]);
 
   // Dynamic badges
