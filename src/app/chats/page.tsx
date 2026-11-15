@@ -28,10 +28,16 @@ export default function ChatsPage() {
 
   useEffect(() => {
     fetchData();
+    const interval = setInterval(() => {
+      fetchData();
+    }, 2500);
+
     try {
       const savedUser = localStorage.getItem("truehive_user");
       if (savedUser) setCurrentUser(JSON.parse(savedUser));
     } catch {}
+
+    return () => clearInterval(interval);
   }, [fetchData]);
 
   const handleLogout = async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   MessageSquare,
   Bot,
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { ChatThread } from "@/lib/store";
+import { getPusherClient, CHANNELS } from "@/lib/pusher";
 
 interface WhatsAppChatViewProps {
   chats: ChatThread[];
@@ -31,6 +32,28 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
   const [replyText, setReplyText] = useState("");
   const [simText, setSimText] = useState("");
   const [simulating, setSimulating] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // 1. Auto-refresh / Realtime polling & Pusher listener
+  useEffect(() => {
+    const timer = setInterval(() => {
+      onRefresh();
+    }, 2500);
+
+    const pusher = getPusherClient();
+    if (pusher) {
+      const channel = pusher.subscribe(CHANNELS.LIVE_CHAT);
+      channel.bind("message-received", () => onRefresh());
+      channel.bind("message-sent", () => onRefresh());
+      return () => {
+        clearInterval(timer);
+        channel.unbind_all();
+        channel.unsubscribe();
+      };
+    }
+
+    return () => clearInterval(timer);
+  }, [onRefresh]);
 
   const filteredChats = chats.filter((c) => {
     if (!searchQuery) return true;
@@ -43,6 +66,10 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
   });
 
   const activeChat = chats.find((c) => c.id === selectedChatId) || filteredChats[0];
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [activeChat?.messages?.length]);
 
   const handleToggleHandover = async (chat: ChatThread) => {
     try {
@@ -288,6 +315,7 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
                     </div>
                   );
                 })}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Reply Form & Simulation Toolbar */}

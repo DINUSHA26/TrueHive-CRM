@@ -175,8 +175,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. SEND MANUAL HUMAN REPLY IN WHATSAPP CHAT
-    if (body.action === "SEND_HUMAN_REPLY") {
-      const { chatId, message } = body;
+    if (body.action === "SEND_HUMAN_REPLY" || body.action === "SEND_REPLY") {
+      const { chatId } = body;
+      const message = String(body.message || body.text || "").trim();
+      if (!message) return NextResponse.json({ error: "Message content cannot be empty" }, { status: 400 });
 
       const chat = await prisma.chatRoom.findUnique({
         where: { id: chatId },

@@ -139,6 +139,21 @@ export default function TrueHiveWorkspace() {
     };
   }, [fetchAllData]);
 
+  // Real-time polling for WhatsApp chats when on chat view
+  useEffect(() => {
+    if (activeNav !== "WHATSAPP_CHAT") return;
+    const interval = setInterval(() => {
+      fetch("/api/crm")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => {
+          if (data?.chats) setChats(data.chats);
+        })
+        .catch(() => null);
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [activeNav]);
+
   // Dynamic badges
   const unreadChatsCount =
     overviewStats.unreadChats || chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
