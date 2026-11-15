@@ -77,6 +77,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   // Automatically mark active chat as seen when opened or selected
   useEffect(() => {
     if (activeChat && activeChat.unreadCount > 0) {
+      activeChat.unreadCount = 0;
       markAsRead(activeChat.id);
     }
   }, [activeChat?.id, activeChat?.unreadCount, markAsRead]);
@@ -112,7 +113,8 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   const handleSelectChat = (chatId: string) => {
     setSelectedChatId(chatId);
     const target = chats.find((c) => c.id === chatId);
-    if (target && target.unreadCount > 0) {
+    if (target) {
+      target.unreadCount = 0;
       markAsRead(chatId);
     }
   };
