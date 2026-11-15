@@ -17,7 +17,9 @@ export function getRedisClient(): Redis | null {
   }
   try {
     const client = new Redis(process.env.REDIS_URL, {
-      maxRetriesPerRequest: 2,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 800,
+      commandTimeout: 1000,
       lazyConnect: true,
     });
     globalForRedis.redis = client;

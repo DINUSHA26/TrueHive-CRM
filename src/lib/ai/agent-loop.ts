@@ -294,8 +294,8 @@ export async function runGeminiAgenticLoop(params: {
   const apiKey = process.env.GEMINI_API_KEY;
   if (apiKey && apiKey !== "your_gemini_api_key") {
     try {
-      const configuredModel = (process.env.GEMINI_MODEL || "gemini-3.5-flash").replace(/^models\//, "");
-      const candidateModels = [configuredModel, "gemini-3.5-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"];
+      const configuredModel = (process.env.GEMINI_MODEL || "gemini-2.5-flash").replace(/^models\//, "");
+      const candidateModels = [configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
       const uniqueModels = Array.from(new Set(candidateModels));
 
       const systemInstruction = `You are Business Hub AI, an intelligent WhatsApp commerce & CRM assistant for our Sri Lankan business.
@@ -331,7 +331,7 @@ Quote currency clearly as LKR or රු.`;
                     thinkingConfig: { thinkingBudget: 0 },
                   },
                 }),
-                signal: AbortSignal.timeout(12000),
+                signal: AbortSignal.timeout(7000),
               }
             );
 

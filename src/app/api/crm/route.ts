@@ -43,7 +43,12 @@ export async function GET(req: NextRequest) {
       unreadCount: room.unreadCount || 0,
       lastMessageText: room.lastMessageText || "",
       lastMessageAt: room.lastMessageAt
-        ? new Date(room.lastMessageAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        ? new Date(room.lastMessageAt).toLocaleTimeString("en-US", {
+            timeZone: "Asia/Colombo",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })
         : "Just now",
       messages: (room.messages || []).map((m) => ({
         id: m.id,
@@ -53,7 +58,12 @@ export async function GET(req: NextRequest) {
         content: m.content || "",
         toolCalls: Array.isArray(m.aiToolCalls) ? (m.aiToolCalls as string[]) : [],
         timestamp: m.createdAt
-          ? new Date(m.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+          ? new Date(m.createdAt).toLocaleTimeString("en-US", {
+              timeZone: "Asia/Colombo",
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            })
           : "Just now",
       })),
     }));

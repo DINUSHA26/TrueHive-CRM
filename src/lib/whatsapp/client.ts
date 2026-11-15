@@ -14,14 +14,17 @@ export async function sendWhatsAppMessage(params: {
   }
 
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const token = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN;
+  const token =
+    process.env.WHATSAPP_ACCESS_TOKEN ||
+    process.env.WHATSAPP_API_TOKEN ||
+    process.env.WHATSAPP_TOKEN;
   const version = process.env.WHATSAPP_API_VERSION || "v21.0";
 
   if (!phoneId || !token || phoneId === "your_phone_number_id") {
-    console.log(`[WhatsApp Cloud API Mock -> ${cleanPhone}]: ${params.text}`);
+    console.warn(`[WhatsApp Send Failed]: Missing credentials. phoneId: ${phoneId}, hasToken: ${Boolean(token)}`);
     return {
-      success: true,
-      waMessageId: `wamid.truehive_${Date.now()}`,
+      success: false,
+      waMessageId: `wamid.mock_${Date.now()}`,
     };
   }
 
@@ -55,6 +58,44 @@ export async function sendWhatsAppMessage(params: {
   } catch (err) {
     console.error("[WhatsApp Cloud API Error]:", err);
     return { success: false, waMessageId: `wamid.err_${Date.now()}` };
+  }
+}
+
+/**
+ * Marks incoming customer WhatsApp message as read (triggers Blue Ticks on WhatsApp!)
+ */
+export async function markWhatsAppMessageAsRead(waMessageId: string): Promise<boolean> {
+  if (!waMessageId || waMessageId.startsWith("wamid.truehive_") || waMessageId.startsWith("wamid.mock_")) {
+    return false;
+  }
+
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const token =
+    process.env.WHATSAPP_ACCESS_TOKEN ||
+    process.env.WHATSAPP_API_TOKEN ||
+    process.env.WHATSAPP_TOKEN;
+  const version = process.env.WHATSAPP_API_VERSION || "v21.0";
+
+  if (!phoneId || !token) return false;
+
+  try {
+    const url = `https://graph.facebook.com/${version}/${phoneId}/messages`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        status: "read",
+        message_id: waMessageId,
+      }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.error("[WhatsApp Mark Read Error]:", err);
+    return false;
   }
 }
 

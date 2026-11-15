@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getStore } from "@/lib/store";
 import { bufferWhatsAppMessage, consumeBufferedWhatsAppMessages, markWebhookProcessed } from "@/lib/redis";
 import { runGeminiAgenticLoop } from "@/lib/ai/agent-loop";
-import { sendWhatsAppMessage } from "@/lib/whatsapp/client";
+import { sendWhatsAppMessage, markWhatsAppMessageAsRead } from "@/lib/whatsapp/client";
 import { broadcastRealtimeEvent, CHANNELS } from "@/lib/pusher";
 
 /**
@@ -78,6 +78,17 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[WhatsApp Webhook Inbound] From: ${customerName} (${customerPhone}) - Message: "${messageText}"`);
+
+    // 1. Mark incoming message as READ on Meta WhatsApp (Triggers BLUE TICKS!)
+    markWhatsAppMessageAsRead(waMessageId).catch(() => null);
+
+    // Sri Lankan Timezone formatter for accurate live chat timestamps
+    const sriLankaTime = new Date().toLocaleTimeString("en-US", {
+      timeZone: "Asia/Colombo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
 
     // Idempotency check via Redis / memory
     const isFirstTime = await markWebhookProcessed(waMessageId);
@@ -188,10 +199,10 @@ export async function POST(req: NextRequest) {
       senderType: "CUSTOMER",
       messageType,
       content: combinedText,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: sriLankaTime,
     });
     memoryChat.lastMessageText = combinedText;
-    memoryChat.lastMessageAt = "Just now";
+    memoryChat.lastMessageAt = sriLankaTime;
 
     // If Human Handover is active (AI paused), do NOT run AI bot
     if (!isAiActive) {
@@ -261,9 +272,10 @@ export async function POST(req: NextRequest) {
       messageType: "TEXT",
       content: agentOutput.replyText,
       toolCalls: agentOutput.executedTools,
-      timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: sriLankaTime,
     });
     memoryChat.lastMessageText = agentOutput.replyText;
+    memoryChat.lastMessageAt = sriLankaTime;
 
     return NextResponse.json({
       success: true,
