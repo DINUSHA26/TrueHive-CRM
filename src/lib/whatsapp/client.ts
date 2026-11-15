@@ -3,28 +3,45 @@
  * Sends interactive messages, AI replies, digital invoices, and automated Order Status updates.
  */
 
+export function getWhatsAppCredentials() {
+  let phoneId = (process.env.WHATSAPP_PHONE_NUMBER_ID || "").trim();
+  let token = (
+    process.env.WHATSAPP_ACCESS_TOKEN ||
+    process.env.WHATSAPP_API_TOKEN ||
+    process.env.WHATSAPP_TOKEN ||
+    ""
+  ).trim();
+
+  // Strip accidental quotes or Bearer prefix often accidentally pasted in Vercel environment variables
+  if (phoneId.startsWith('"') && phoneId.endsWith('"')) phoneId = phoneId.slice(1, -1).trim();
+  if (phoneId.startsWith("'") && phoneId.endsWith("'")) phoneId = phoneId.slice(1, -1).trim();
+
+  if (token.startsWith('"') && token.endsWith('"')) token = token.slice(1, -1).trim();
+  if (token.startsWith("'") && token.endsWith("'")) token = token.slice(1, -1).trim();
+  if (token.startsWith("Bearer ")) token = token.slice(7).trim();
+
+  const version = (process.env.WHATSAPP_API_VERSION || "v21.0").trim();
+  return { phoneId, token, version };
+}
+
 export async function sendWhatsAppMessage(params: {
   toPhone: string;
   text: string;
   previewUrl?: boolean;
-}): Promise<{ success: boolean; waMessageId: string }> {
+}): Promise<{ success: boolean; waMessageId: string; error?: string }> {
   let cleanPhone = params.toPhone.replace(/[^0-9]/g, "");
   if (cleanPhone.startsWith("0") && cleanPhone.length === 10) {
     cleanPhone = `94${cleanPhone.slice(1)}`;
   }
 
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const token =
-    process.env.WHATSAPP_ACCESS_TOKEN ||
-    process.env.WHATSAPP_API_TOKEN ||
-    process.env.WHATSAPP_TOKEN;
-  const version = process.env.WHATSAPP_API_VERSION || "v21.0";
+  const { phoneId, token, version } = getWhatsAppCredentials();
 
   if (!phoneId || !token || phoneId === "your_phone_number_id") {
     console.warn(`[WhatsApp Send Failed]: Missing credentials. phoneId: ${phoneId}, hasToken: ${Boolean(token)}`);
     return {
       success: false,
-      waMessageId: `wamid.mock_${Date.now()}`,
+      waMessageId: `wamid.missing_creds_${Date.now()}`,
+      error: "Missing credentials or placeholder phoneId",
     };
   }
 
@@ -47,17 +64,29 @@ export async function sendWhatsAppMessage(params: {
         },
       }),
     });
-    const data = await res.json();
+
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       console.error("[WhatsApp Cloud API Send Error]: HTTP", res.status, JSON.stringify(data, null, 2));
+      return {
+        success: false,
+        waMessageId: `wamid.meta_err_${res.status}_${Date.now()}`,
+        error: data?.error?.message || `HTTP ${res.status}`,
+      };
     }
+
+    const realWamid = data?.messages?.[0]?.id || `wamid.${Date.now()}`;
     return {
-      success: res.ok,
-      waMessageId: data?.messages?.[0]?.id || `wamid.${Date.now()}`,
+      success: true,
+      waMessageId: realWamid,
     };
-  } catch (err) {
+  } catch (err: any) {
     console.error("[WhatsApp Cloud API Error]:", err);
-    return { success: false, waMessageId: `wamid.err_${Date.now()}` };
+    return {
+      success: false,
+      waMessageId: `wamid.exception_${Date.now()}`,
+      error: err?.message || "Network exception",
+    };
   }
 }
 
@@ -69,13 +98,7 @@ export async function markWhatsAppMessageAsRead(waMessageId: string): Promise<bo
     return false;
   }
 
-  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const token =
-    process.env.WHATSAPP_ACCESS_TOKEN ||
-    process.env.WHATSAPP_API_TOKEN ||
-    process.env.WHATSAPP_TOKEN;
-  const version = process.env.WHATSAPP_API_VERSION || "v21.0";
-
+  const { phoneId, token, version } = getWhatsAppCredentials();
   if (!phoneId || !token) return false;
 
   try {
@@ -92,7 +115,13 @@ export async function markWhatsAppMessageAsRead(waMessageId: string): Promise<bo
         message_id: waMessageId,
       }),
     });
-    return res.ok;
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      console.error("[WhatsApp Mark Read Error]: HTTP", res.status, JSON.stringify(errData));
+      return false;
+    }
+    return true;
   } catch (err) {
     console.error("[WhatsApp Mark Read Error]:", err);
     return false;

@@ -40,6 +40,11 @@ export async function POST(req: NextRequest) {
     // 1. Check for Meta delivery/read status updates
     const value = body.entry?.[0]?.changes?.[0]?.value;
     if (value?.statuses && !value?.messages) {
+      const statusObj = value.statuses[0];
+      console.log(`[WhatsApp Status Webhook]: ID=${statusObj?.id}, Status=${statusObj?.status}, Recipient=${statusObj?.recipient_id}`);
+      if (statusObj?.errors) {
+        console.error("[WhatsApp Message Delivery Error]:", JSON.stringify(statusObj.errors, null, 2));
+      }
       return NextResponse.json({ status: "status_update_acknowledged" }, { status: 200 });
     }
 
