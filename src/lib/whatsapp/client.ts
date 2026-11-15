@@ -16,6 +16,11 @@ export function getWhatsAppCredentials() {
   if (phoneId.startsWith('"') && phoneId.endsWith('"')) phoneId = phoneId.slice(1, -1).trim();
   if (phoneId.startsWith("'") && phoneId.endsWith("'")) phoneId = phoneId.slice(1, -1).trim();
 
+  // Auto-correct truncated Fashion Dora phone ID if last digit '6' was accidentally omitted in Vercel (15 digits -> 16 digits)
+  if (phoneId === "135522145435187") {
+    phoneId = "1355221454351876";
+  }
+
   if (token.startsWith('"') && token.endsWith('"')) token = token.slice(1, -1).trim();
   if (token.startsWith("'") && token.endsWith("'")) token = token.slice(1, -1).trim();
   if (token.startsWith("Bearer ")) token = token.slice(7).trim();
