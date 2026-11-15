@@ -39,13 +39,34 @@ export async function POST(req: NextRequest) {
 
     // 1. Check for Meta delivery/read status updates
     const value = body.entry?.[0]?.changes?.[0]?.value;
-    if (value?.statuses && !value?.messages) {
-      const statusObj = value.statuses[0];
-      console.log(`[WhatsApp Status Webhook]: ID=${statusObj?.id}, Status=${statusObj?.status}, Recipient=${statusObj?.recipient_id}`);
-      if (statusObj?.errors) {
-        console.error("[WhatsApp Message Delivery Error]:", JSON.stringify(statusObj.errors, null, 2));
+    if (value?.statuses) {
+      for (const st of value.statuses) {
+        console.log(`[WhatsApp Status Webhook]: ID=${st?.id}, Status=${st?.status}, Recipient=${st?.recipient_id}`);
+        if (st?.errors) {
+          console.error("[WhatsApp Message Delivery Error]:", JSON.stringify(st.errors, null, 2));
+        }
+        if (st?.id) {
+          try {
+            await prisma.chatMessage.updateMany({
+              where: { waMessageId: st.id },
+              data: {
+                mediaUrl: JSON.stringify({
+                  status: st.status,
+                  errors: st.errors || null,
+                  recipient_id: st.recipient_id,
+                  timestamp: st.timestamp,
+                  receivedAt: new Date().toISOString(),
+                }),
+              },
+            });
+          } catch (stErr) {
+            console.warn("[Save Status Error]:", stErr);
+          }
+        }
       }
-      return NextResponse.json({ status: "status_update_acknowledged" }, { status: 200 });
+      if (!value?.messages) {
+        return NextResponse.json({ status: "status_update_acknowledged" }, { status: 200 });
+      }
     }
 
     // Support both official Meta Cloud API payload and internal Simulator payload
@@ -85,7 +106,11 @@ export async function POST(req: NextRequest) {
     console.log(`[WhatsApp Webhook Inbound] From: ${customerName} (${customerPhone}) - Message: "${messageText}"`);
 
     // 1. Mark incoming message as READ on Meta WhatsApp (Triggers BLUE TICKS!)
-    markWhatsAppMessageAsRead(waMessageId).catch(() => null);
+    try {
+      await markWhatsAppMessageAsRead(waMessageId);
+    } catch (readErr) {
+      console.warn("[Mark Read Failed]:", readErr);
+    }
 
     // Sri Lankan Timezone formatter for accurate live chat timestamps
     const sriLankaTime = new Date().toLocaleTimeString("en-US", {

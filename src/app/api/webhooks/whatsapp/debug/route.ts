@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWhatsAppCredentials } from "@/lib/whatsapp/client";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const creds = getWhatsAppCredentials();
   const rawPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
   const rawToken = process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_TOKEN || "";
   const rawWabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || "";
+
+  // Query recent messages to see if Meta sent status updates
+  let recentMessages: any[] = [];
+  try {
+    recentMessages = await prisma.chatMessage.findMany({
+      take: 6,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        waMessageId: true,
+        direction: true,
+        senderType: true,
+        content: true,
+        mediaUrl: true,
+        createdAt: true,
+      },
+    });
+  } catch (err: any) {
+    recentMessages = [{ dbError: err.message }];
+  }
 
   // 1. Check Phone Details on Meta Graph API
   let metaPhoneCheck: any = null;
@@ -77,5 +98,6 @@ export async function GET(req: NextRequest) {
       data: metaPhoneCheck,
     },
     testSendResult,
+    recentMessages,
   });
 }
