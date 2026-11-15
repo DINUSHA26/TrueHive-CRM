@@ -18,7 +18,7 @@ export default function CrmPage() {
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch("/api/crm");
+      const res = await fetch("/api/crm?view=customers");
       const data = await res.json();
       if (data.customers) setCustomers(data.customers);
     } catch (err) {

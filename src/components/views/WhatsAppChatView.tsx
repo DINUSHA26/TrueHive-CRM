@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   MessageSquare,
   Bot,
@@ -24,9 +24,10 @@ import { getPusherClient, CHANNELS } from "@/lib/pusher";
 interface WhatsAppChatViewProps {
   chats: ChatThread[];
   onRefresh: () => void;
+  onMarkAsRead?: (chatId: string) => void;
 }
 
-export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
+export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppChatViewProps) {
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || "");
   const [searchQuery, setSearchQuery] = useState("");
   const [replyText, setReplyText] = useState("");
@@ -34,26 +35,12 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
   const [simulating, setSimulating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // 1. Auto-refresh / Realtime polling & Pusher listener
+  // Auto-sync selected chat if initial chats was empty
   useEffect(() => {
-    const timer = setInterval(() => {
-      onRefresh();
-    }, 2500);
-
-    const pusher = getPusherClient();
-    if (pusher) {
-      const channel = pusher.subscribe(CHANNELS.LIVE_CHAT);
-      channel.bind("message-received", () => onRefresh());
-      channel.bind("message-sent", () => onRefresh());
-      return () => {
-        clearInterval(timer);
-        channel.unbind_all();
-        channel.unsubscribe();
-      };
+    if (chats.length > 0 && (!selectedChatId || !chats.some((c) => c.id === selectedChatId))) {
+      setSelectedChatId(chats[0].id);
     }
-
-    return () => clearInterval(timer);
-  }, [onRefresh]);
+  }, [chats, selectedChatId]);
 
   const filteredChats = chats.filter((c) => {
     if (!searchQuery) return true;
@@ -67,11 +54,71 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
 
   const activeChat = chats.find((c) => c.id === selectedChatId) || filteredChats[0];
 
+  // Mark chat as read in both local state and backend database
+  const markAsRead = useCallback(
+    async (chatId: string) => {
+      if (!chatId) return;
+      if (onMarkAsRead) {
+        onMarkAsRead(chatId);
+      }
+      try {
+        await fetch("/api/crm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "MARK_AS_READ", chatId }),
+        });
+      } catch (err) {
+        console.warn("[CRM] Failed to mark chat as read:", err);
+      }
+    },
+    [onMarkAsRead]
+  );
+
+  // Automatically mark active chat as seen when opened or selected
+  useEffect(() => {
+    if (activeChat && activeChat.unreadCount > 0) {
+      markAsRead(activeChat.id);
+    }
+  }, [activeChat?.id, activeChat?.unreadCount, markAsRead]);
+
+  // Realtime Pusher subscription
+  useEffect(() => {
+    const pusher = getPusherClient();
+    if (pusher) {
+      const channel = pusher.subscribe(CHANNELS.LIVE_CHAT);
+      channel.bind("message-received", (data: any) => {
+        onRefresh();
+        if (data?.chatRoomId && data.chatRoomId === selectedChatId) {
+          markAsRead(data.chatRoomId);
+        }
+      });
+      channel.bind("message-sent", () => onRefresh());
+      channel.bind("chat-read", (data: any) => {
+        if (data?.chatRoomId && onMarkAsRead) {
+          onMarkAsRead(data.chatRoomId);
+        }
+      });
+      return () => {
+        channel.unbind_all();
+        channel.unsubscribe();
+      };
+    }
+  }, [onRefresh, selectedChatId, markAsRead, onMarkAsRead]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages?.length]);
 
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChatId(chatId);
+    const target = chats.find((c) => c.id === chatId);
+    if (target && target.unreadCount > 0) {
+      markAsRead(chatId);
+    }
+  };
+
   const handleToggleHandover = async (chat: ChatThread) => {
+    chat.isAiActive = !chat.isAiActive;
     try {
       await fetch("/api/crm", {
         method: "POST",
@@ -79,7 +126,7 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
         body: JSON.stringify({
           action: "TOGGLE_HANDOVER",
           chatId: chat.id,
-          isAiActive: !chat.isAiActive,
+          isAiActive: chat.isAiActive,
         }),
       });
       onRefresh();
@@ -92,6 +139,33 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
     e.preventDefault();
     if (!replyText.trim() || !activeChat) return;
 
+    const messageText = replyText.trim();
+    setReplyText("");
+
+    // Optimistically show message immediately
+    const optimisticMessage = {
+      id: `local-${Date.now()}`,
+      direction: "OUTBOUND" as const,
+      senderType: "HUMAN_AGENT" as const,
+      messageType: "TEXT" as const,
+      content: messageText,
+      timestamp: new Date().toLocaleTimeString("en-US", {
+        timeZone: "Asia/Colombo",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+    };
+    if (activeChat.messages) {
+      activeChat.messages.push(optimisticMessage);
+    }
+    activeChat.lastMessageText = messageText;
+    activeChat.lastMessageAt = optimisticMessage.timestamp;
+    activeChat.unreadCount = 0;
+    if (onMarkAsRead) {
+      onMarkAsRead(activeChat.id);
+    }
+
     try {
       await fetch("/api/crm", {
         method: "POST",
@@ -99,10 +173,9 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
         body: JSON.stringify({
           action: "SEND_REPLY",
           chatId: activeChat.id,
-          text: replyText.trim(),
+          text: messageText,
         }),
       });
-      setReplyText("");
       onRefresh();
     } catch (err) {
       console.error(err);
@@ -185,7 +258,7 @@ export function WhatsAppChatView({ chats, onRefresh }: WhatsAppChatViewProps) {
                 return (
                   <button
                     key={chat.id}
-                    onClick={() => setSelectedChatId(chat.id)}
+                    onClick={() => handleSelectChat(chat.id)}
                     className={`w-full p-3.5 text-left flex items-start justify-between gap-3 transition ${
                       isSelected
                         ? "bg-blue-600/15 border-l-4 border-blue-500"

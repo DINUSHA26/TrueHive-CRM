@@ -156,12 +156,20 @@ export default function TrueHiveWorkspace() {
 
   // Dynamic badges
   const unreadChatsCount =
-    overviewStats.unreadChats || chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+    chats.length > 0
+      ? chats.reduce((acc, c) => acc + (c.unreadCount || 0), 0)
+      : (overviewStats.unreadChats || 0);
   const pendingOrdersCount =
     overviewStats.pendingOrdersCount || orders.filter((o) => o.status === "PENDING").length;
   const lowStockCount =
     overviewStats.lowStockCount ||
     products.filter((p) => p.currentStock <= (p.reorderLevel || 10)).length;
+
+  const handleChatMarkAsRead = useCallback((chatId: string) => {
+    setChats((prev) =>
+      prev.map((c) => (c.id === chatId ? { ...c, unreadCount: 0 } : c))
+    );
+  }, []);
 
   return (
     <DashboardLayout
@@ -201,7 +209,11 @@ export default function TrueHiveWorkspace() {
       )}
 
       {activeNav === "WHATSAPP_CHAT" && (
-        <WhatsAppChatView chats={chats} onRefresh={fetchAllData} />
+        <WhatsAppChatView
+          chats={chats}
+          onRefresh={fetchAllData}
+          onMarkAsRead={handleChatMarkAsRead}
+        />
       )}
 
       {activeNav === "CRM" && (

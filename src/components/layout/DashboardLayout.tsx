@@ -47,7 +47,10 @@ export function DashboardLayout({
 
   useEffect(() => {
     if (badges) {
-      setLiveBadges(badges);
+      setLiveBadges((prev) => ({
+        ...prev,
+        ...badges,
+      }));
     }
   }, [badges]);
 

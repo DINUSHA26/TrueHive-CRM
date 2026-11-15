@@ -16,7 +16,7 @@ export default function LeadsPage() {
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const res = await fetch("/api/crm");
+      const res = await fetch("/api/crm?view=leads");
       const data = await res.json();
       if (data.leads) setLeads(data.leads);
     } catch (err) {
