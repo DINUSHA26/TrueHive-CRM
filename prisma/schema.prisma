@@ -436,6 +436,17 @@ model Order {
   slipImageUrl     String?              // Cloudinary URL for bank transfer receipt
   slipVerifiedByAi Boolean              @default(false)
   notes            String?
+  secondaryPhone       String?
+  deliveryCity         String?
+  courierPartner       String?              // e.g. Prompt, Koombiyo, Standard Courier, Domex, Pronto
+  trackingNumber       String?              // e.g. TRK-12345
+  expectedDeliveryDate DateTime?
+  codAmount            Float?
+  courierFee           Float?               @default(0)
+  settlementStatus     String?              @default("NOT_DUE") // NOT_DUE, AWAITING_COLLECTION, AWAITING_REMITTANCE, SETTLED, DISPUTED
+  remittedAmount       Float?               @default(0)
+  remittanceRef        String?
+  remittedAt           DateTime?
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 
