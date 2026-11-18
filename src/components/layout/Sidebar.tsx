@@ -216,126 +216,124 @@ export function Sidebar({
   };
 
   const sidebarContent = (
-    <div className="h-full flex flex-col justify-between p-3.5 bg-[#0a1120] text-slate-100 select-none">
+    <div className="h-full flex flex-col p-3 bg-[#0a1120] text-slate-100 select-none overflow-hidden">
       {/* Top Brand Header */}
-      <div>
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 px-1.5">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-blue-500/20">
-              <Layers className="w-5 h-5" />
-            </div>
-            {!isCollapsed && (
-              <div className="leading-tight truncate">
-                <h1 className="text-[14px] font-semibold text-white tracking-tight">
-                  Business Hub
-                </h1>
-                <p className="text-[11px] text-slate-400">Management Portal</p>
-              </div>
-            )}
+      <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 px-1 shrink-0">
+        <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-blue-500/20">
+            <Layers className="w-4 h-4" />
           </div>
-
-          {/* Desktop Collapse / Mobile Close */}
-          {onToggleCollapse && (
-            <button
-              onClick={onToggleCollapse}
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              className="hidden lg:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition"
-            >
-              {isCollapsed ? (
-                <PanelLeftOpen className="w-4 h-4" />
-              ) : (
-                <PanelLeftClose className="w-4 h-4" />
-              )}
-            </button>
-          )}
-
-          {/* Mobile close cross */}
-          {onCloseMobile && (
-            <button
-              onClick={onCloseMobile}
-              aria-label="Close sidebar"
-              className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Navigation Sections */}
-        <div className="mt-3.5 space-y-4 overflow-y-auto max-h-[calc(100vh-170px)] pr-1 custom-scrollbar">
-          {NAV_SECTIONS.map((section) => (
-            <div key={section.title} className="space-y-1">
-              {!isCollapsed && (
-                <div className="px-3 pt-1 pb-1">
-                  <span className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">
-                    {section.title}
-                  </span>
-                </div>
-              )}
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeNav === item.key;
-                const badgeValue =
-                  item.badgeKey && badges ? badges[item.badgeKey] : undefined;
-
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => handleItemClick(item.key)}
-                    title={isCollapsed ? item.label : undefined}
-                    className={`w-full group flex items-center justify-between px-3 py-2 rounded-xl text-[13px] font-normal transition-colors duration-150 ${
-                      isActive
-                        ? "bg-[#2563eb] text-white shadow-md shadow-blue-600/30 font-medium"
-                        : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
-                    } ${isCollapsed ? "justify-center px-2 py-2.5" : ""}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Icon
-                        className={`w-4 h-4 shrink-0 ${
-                          isActive
-                            ? "text-white"
-                            : "text-slate-400 group-hover:text-slate-200"
-                        }`}
-                      />
-                      {!isCollapsed && <span className="truncate">{item.label}</span>}
-                    </div>
-
-                    {!isCollapsed && badgeValue !== undefined && badgeValue > 0 && (
-                      <span
-                        className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                          item.badgeVariant === "green"
-                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                            : "bg-slate-800 text-slate-400 border border-slate-700/50"
-                        }`}
-                      >
-                        {badgeValue}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+          {!isCollapsed && (
+            <div className="leading-tight truncate">
+              <h1 className="text-[14px] font-semibold text-white tracking-tight">
+                Business Hub
+              </h1>
+              <p className="text-[10px] text-slate-400">Management Portal</p>
             </div>
-          ))}
+          )}
         </div>
+
+        {/* Desktop Collapse / Mobile Close */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="hidden lg:flex p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </button>
+        )}
+
+        {/* Mobile close cross */}
+        {onCloseMobile && (
+          <button
+            onClick={onCloseMobile}
+            aria-label="Close sidebar"
+            className="lg:hidden p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
-      {/* Footer Profile Section */}
-      <div className="pt-3 border-t border-slate-800/80">
+      {/* Navigation Sections (Scrolls cleanly between header and profile) */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar py-2 space-y-2.5 pr-1 min-h-0">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.title} className="space-y-0.5">
+            {!isCollapsed && (
+              <div className="px-3 pt-1 pb-0.5">
+                <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+                  {section.title}
+                </span>
+              </div>
+            )}
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeNav === item.key;
+              const badgeValue =
+                item.badgeKey && badges ? badges[item.badgeKey] : undefined;
+
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => handleItemClick(item.key)}
+                  title={isCollapsed ? item.label : undefined}
+                  className={`w-full group flex items-center justify-between px-3 py-1.5 rounded-xl text-[13px] font-normal transition-colors duration-150 ${
+                    isActive
+                      ? "bg-[#2563eb] text-white shadow-md shadow-blue-600/30 font-medium"
+                      : "text-slate-300 hover:bg-slate-800/60 hover:text-white"
+                  } ${isCollapsed ? "justify-center px-2 py-2" : ""}`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Icon
+                      className={`w-4 h-4 shrink-0 ${
+                        isActive
+                          ? "text-white"
+                          : "text-slate-400 group-hover:text-slate-200"
+                      }`}
+                    />
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  </div>
+
+                  {!isCollapsed && badgeValue !== undefined && badgeValue > 0 && (
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                        item.badgeVariant === "green"
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                          : "bg-slate-800 text-slate-400 border border-slate-700/50"
+                      }`}
+                    >
+                      {badgeValue}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer Profile Section (Permanently fitted to the screen bottom) */}
+      <div className="pt-2 border-t border-slate-800/80 shrink-0 mt-auto">
         <div
-          className={`flex items-center justify-between p-2 rounded-xl bg-slate-900/60 border border-slate-800/60 ${
+          className={`flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800/80 shadow-sm ${
             isCollapsed ? "flex-col gap-2 p-1.5" : ""
           }`}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-300 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700/80 flex items-center justify-center text-slate-300 shrink-0 shadow-inner">
               <UserCircle2 className="w-5 h-5 text-slate-300" />
             </div>
             {!isCollapsed && (
               <div className="leading-tight truncate">
-                <p className="text-[13px] font-semibold text-white truncate">
+                <p className="text-[12px] font-bold text-white truncate">
                   {currentUser.name || "Administrator"}
                 </p>
-                <p className="text-[11px] text-slate-400 truncate">
+                <p className="text-[10px] text-slate-400 font-mono uppercase tracking-wider truncate">
                   {currentUser.role || "Super Admin"}
                 </p>
               </div>
@@ -357,9 +355,9 @@ export function Sidebar({
 
   return (
     <>
-      {/* Desktop Sticky Sidebar */}
+      {/* Desktop Sticky Sidebar (Locked to screen height so user profile always fits on screen) */}
       <aside
-        className={`hidden lg:flex flex-col shrink-0 border-r border-slate-800/80 bg-[#0a1120] transition-all duration-300 no-print ${
+        className={`hidden lg:flex flex-col shrink-0 sticky top-0 h-screen border-r border-slate-800/80 bg-[#0a1120] transition-all duration-300 no-print z-20 ${
           isCollapsed ? "w-[72px]" : "w-64"
         }`}
       >
@@ -374,9 +372,9 @@ export function Sidebar({
         />
       )}
 
-      {/* Mobile / Tablet Drawer Off-Canvas */}
+      {/* Mobile / Tablet Drawer Off-Canvas (Full height with user profile at bottom) */}
       <aside
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 bg-[#0a1120] border-r border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out no-print ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-72 h-[100dvh] bg-[#0a1120] border-r border-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out no-print ${
           isMobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
