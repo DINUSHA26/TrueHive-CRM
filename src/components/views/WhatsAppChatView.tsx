@@ -410,14 +410,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse inline-block" />
               </h1>
               <div className="flex items-center gap-3 text-[#8696a0]">
-                <button
-                  type="button"
-                  onClick={() => setShowSimModal(true)}
-                  className="p-1 hover:text-white transition"
-                  title="Simulate Customer Message"
-                >
-                  <Sparkles className="w-5 h-5 text-emerald-400" />
-                </button>
                 <button type="button" className="p-1 hover:text-white transition">
                   <MoreVertical className="w-5 h-5" />
                 </button>
@@ -563,18 +555,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               )}
             </div>
 
-            {/* Floating Action Button (FAB - Green chat icon) */}
-            <div className="absolute bottom-16 right-4 z-20">
-              <button
-                type="button"
-                onClick={() => setShowSimModal(true)}
-                className="w-13 h-13 p-3.5 rounded-2xl bg-[#00a884] hover:bg-[#00c59b] text-white shadow-xl shadow-emerald-500/30 flex items-center justify-center transition active:scale-95"
-                title="New Message / Test Loop"
-              >
-                <MessageSquarePlus className="w-6 h-6" />
-              </button>
-            </div>
-
             {/* Mobile Bottom Navigation Bar */}
             <div className="h-14 bg-[#0b141a] border-t border-[#202c33] flex items-center justify-around px-2 z-10 shrink-0">
               <button
@@ -684,14 +664,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                   )}
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setShowSimModal(true)}
-                  className="p-1.5 text-[#8696a0] hover:text-white"
-                  title="Simulate Customer Message"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
-                </button>
 
                 <button type="button" className="p-1 text-[#8696a0] hover:text-white">
                   <MoreVertical className="w-5 h-5" />
