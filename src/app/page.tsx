@@ -62,12 +62,16 @@ export default function TrueHiveWorkspace() {
   const fetchAllData = useCallback(async () => {
     setIsRefreshing(true);
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("truehive_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const [overRes, invRes, crmRes, ordRes, finRes] = await Promise.all([
-        fetch("/api/overview").catch(() => null),
-        fetch("/api/inventory").catch(() => null),
-        fetch("/api/crm").catch(() => null),
-        fetch("/api/orders").catch(() => null),
-        fetch("/api/finance").catch(() => null),
+        fetch("/api/overview", { headers }).catch(() => null),
+        fetch("/api/inventory", { headers }).catch(() => null),
+        fetch("/api/crm", { headers }).catch(() => null),
+        fetch("/api/orders", { headers }).catch(() => null),
+        fetch("/api/finance", { headers }).catch(() => null),
       ]);
 
       if (overRes?.ok) {
@@ -110,7 +114,11 @@ export default function TrueHiveWorkspace() {
     let isMounted = true;
     const verifyAuthAndLoad = async () => {
       try {
-        const meRes = await fetch("/api/auth/me");
+        const token = typeof window !== "undefined" ? localStorage.getItem("truehive_token") : null;
+        const headers: Record<string, string> = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const meRes = await fetch("/api/auth/me", { headers });
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.authenticated && meData.user) {
@@ -126,6 +134,25 @@ export default function TrueHiveWorkspace() {
         }
       } catch (e) {
         console.warn("Auth check error:", e);
+      }
+
+      // Fallback: Check cached local user session
+      const localUserStr =
+        typeof window !== "undefined"
+          ? localStorage.getItem("truehive_user") || sessionStorage.getItem("truehive_user")
+          : null;
+      if (localUserStr) {
+        try {
+          const localUser = JSON.parse(localUserStr);
+          if (localUser && isMounted) {
+            setCurrentUser({
+              name: localUser.name || "Administrator",
+              role: localUser.role || "Super Admin",
+            });
+            fetchAllData();
+            return;
+          }
+        } catch {}
       }
 
       // If unauthenticated, redirect to login

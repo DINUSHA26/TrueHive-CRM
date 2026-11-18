@@ -48,6 +48,12 @@ export default function LoginPage() {
         return;
       }
 
+      if (data.token) {
+        localStorage.setItem("truehive_token", data.token);
+        document.cookie = `truehive_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+        document.cookie = `truehive_auth_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+      }
+
       if (rememberMe) {
         localStorage.setItem("truehive_user", JSON.stringify(data.user));
       } else {
