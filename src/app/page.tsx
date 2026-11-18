@@ -300,6 +300,7 @@ export default function TrueHiveWorkspace() {
         <SupplierManagementView
           suppliers={suppliers}
           ingredients={ingredients}
+          products={products}
           onRefresh={fetchAllData}
         />
       )}

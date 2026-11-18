@@ -533,7 +533,7 @@ export function SupplierLedgerView({
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex flex-wrap items-center gap-2 no-scrollbar">
               <div className="flex items-center gap-1">
                 {["ALL", "DUE", "PARTIAL", "PAID", "OVERDUE"].map((st) => (
                   <button

@@ -338,7 +338,7 @@ export function CustomerCreditView({ customers, onRefresh, onNavigate }: Custome
             </div>
 
             {/* Status Tabs */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex flex-wrap items-center gap-1.5 no-scrollbar">
               {["ALL", "DUE", "PARTIAL", "PAID", "OVERDUE"].map((status) => (
                 <button
                   key={status}

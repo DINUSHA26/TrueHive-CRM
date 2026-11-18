@@ -590,7 +590,7 @@ export function OrderManagementView({
       )}
 
       {/* Channel Tabs Toolbar (Page 12) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-800">
+      <div className="flex flex-wrap items-center gap-1.5 pb-1 border-b border-slate-800 no-scrollbar">
         {[
           { key: "ALL", label: "All Orders", icon: Layers },
           { key: "WHATSAPP_AI", label: "WhatsApp AI Orders", icon: Bot, badge: orders.filter((o) => o.source === "WHATSAPP_AI").length },
@@ -642,7 +642,7 @@ export function OrderManagementView({
             </div>
 
             {/* Fulfillment Status Filters */}
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex flex-wrap items-center gap-1.5 no-scrollbar">
               {["ALL", "PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED", "DELIVERED", "CANCELLED"].map(
                 (st) => (
                   <button

@@ -4,13 +4,14 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SupplierManagementView } from "@/components/views/SupplierManagementView";
-import type { SupplierRecord, IngredientItem } from "@/lib/store";
+import type { SupplierRecord, IngredientItem, ProductItem } from "@/lib/store";
 import { NAV_ROUTES } from "@/components/layout/Sidebar";
 
 export default function SuppliersPage() {
   const router = useRouter();
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string }>({
     name: "Administrator",
@@ -30,6 +31,8 @@ export default function SuppliersPage() {
       ]);
       if (supData.suppliers) setSuppliers(supData.suppliers);
       if (invData.ingredients) setIngredients(invData.ingredients);
+      if (invData.products) setProducts(invData.products);
+      if (supData.products) setProducts(supData.products);
     } catch (err) {
       console.error("Failed to fetch supplier records:", err);
     } finally {
@@ -67,6 +70,7 @@ export default function SuppliersPage() {
       <SupplierManagementView
         suppliers={suppliers}
         ingredients={ingredients}
+        products={products}
         onRefresh={fetchData}
         onNavigate={(key) => router.push(NAV_ROUTES[key] || "/")}
       />

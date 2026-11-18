@@ -20,6 +20,8 @@ import {
   Receipt,
   FileText,
   Clock,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -77,6 +79,102 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRecord | null>(null);
   const [historyData, setHistoryData] = useState<any>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Edit Customer Modal State
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerRecord | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNic, setEditNic] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editCustomerType, setEditCustomerType] = useState("Regular");
+  const [editCreditLimit, setEditCreditLimit] = useState<number | "">(50000);
+  const [editCreditDays, setEditCreditDays] = useState<number | "">(30);
+  const [editStarPoints, setEditStarPoints] = useState<number | "">(0);
+  const [updating, setUpdating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleOpenEdit = (c: CustomerRecord) => {
+    setEditingCustomer(c);
+    setEditName(c.name || "");
+    setEditPhone(c.phone || "");
+    setEditNic(c.nic || "");
+    setEditEmail(c.email || "");
+    setEditAddress(c.address || "");
+    setEditCustomerType(c.customerType || "Regular");
+    setEditCreditLimit(c.creditLimit !== undefined ? c.creditLimit : 50000);
+    setEditCreditDays(c.creditDays !== undefined ? c.creditDays : 30);
+    setEditStarPoints(c.starPoints !== undefined ? c.starPoints : 0);
+    setEditModalOpen(true);
+  };
+
+  const handleUpdateCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer || !editName.trim() || !editPhone.trim()) return;
+
+    setUpdating(true);
+    try {
+      const res = await fetch("/api/crm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "UPDATE_CUSTOMER",
+          id: editingCustomer.id,
+          name: editName.trim(),
+          phone: editPhone.trim(),
+          nic: editNic.trim() || undefined,
+          email: editEmail.trim() || undefined,
+          address: editAddress.trim() || undefined,
+          customerType: editCustomerType,
+          creditLimit: editCreditLimit === "" ? 0 : Number(editCreditLimit),
+          creditDays: editCreditDays === "" ? 30 : Number(editCreditDays),
+          starPoints: editStarPoints === "" ? 0 : Number(editStarPoints),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditModalOpen(false);
+        setEditingCustomer(null);
+        onRefresh();
+      } else {
+        alert(data.error || "Failed to update customer");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error updating customer.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteCustomer = async (c: CustomerRecord) => {
+    if (!confirm(`Are you sure you want to delete customer "${c.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    setDeletingId(c.id);
+    try {
+      const res = await fetch("/api/crm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "DELETE_CUSTOMER",
+          id: c.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onRefresh();
+      } else {
+        alert(data.error || "Failed to delete customer");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error deleting customer.");
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const filtered = customers.filter((c) => {
     const q = search.toLowerCase();
@@ -234,7 +332,7 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
               />
             </div>
 
-            <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
+            <div className="flex flex-wrap items-center gap-1.5 no-scrollbar">
               {["ALL", "REGULAR", "WHOLESALE", "CORPORATE"].map((type) => (
                 <button
                   key={type}
@@ -359,6 +457,25 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
                               leftIcon={<History className="w-3.5 h-3.5 text-indigo-400" />}
                             >
                               History
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEdit(c)}
+                              className="text-xs py-1 px-2 text-slate-300 hover:text-white hover:border-blue-500"
+                              leftIcon={<Pencil className="w-3.5 h-3.5 text-blue-400" />}
+                            >
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteCustomer(c)}
+                              disabled={deletingId === c.id}
+                              className="text-xs py-1 px-2 text-slate-300 hover:text-rose-400 hover:border-rose-500/50"
+                              leftIcon={<Trash2 className="w-3.5 h-3.5 text-rose-400" />}
+                            >
+                              Delete
                             </Button>
                             <Button
                               variant="secondary"
@@ -534,7 +651,156 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
         </form>
       </Modal>
 
-      {/* Customer Invoice & Credit History Modal */}
+      {/* Edit Customer Modal */}
+      <Modal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Customer Profile"
+        description={`Update details for ${editingCustomer?.name || "Customer"}`}
+        maxWidth="lg"
+      >
+        <form onSubmit={handleUpdateCustomer} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Customer Full Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                WhatsApp / Mobile Phone *
+              </label>
+              <input
+                type="text"
+                required
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                National Identity Card (NIC)
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. 199012345678"
+                value={editNic}
+                onChange={(e) => setEditNic(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">Customer Type</label>
+              <select
+                value={editCustomerType}
+                onChange={(e) => setEditCustomerType(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+              >
+                <option value="Regular">Regular</option>
+                <option value="Wholesale">Wholesale</option>
+                <option value="Corporate">Corporate</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Star Points
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={editStarPoints}
+                onChange={(e) => setEditStarPoints(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Credit Amount Limit (Rs.)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="any"
+                value={editCreditLimit}
+                onChange={(e) => setEditCreditLimit(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Credit Days Term Limit
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={editCreditDays}
+                onChange={(e) => setEditCreditDays(e.target.value === "" ? "" : Number(e.target.value))}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Email Address (Optional)
+              </label>
+              <input
+                type="email"
+                placeholder="customer@gmail.com"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 block mb-1">
+                Delivery / Billing Address
+              </label>
+              <input
+                type="text"
+                placeholder="No. 45, Galle Road, Colombo 03"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" size="sm" loading={updating}>
+              Update Customer
+            </Button>
+          </div>
+        </form>
+      </Modal>
       <Modal
         isOpen={historyModalOpen}
         onClose={() => setHistoryModalOpen(false)}

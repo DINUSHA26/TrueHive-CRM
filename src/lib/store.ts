@@ -123,12 +123,17 @@ export interface ChatThread {
 
 export interface SupplierRecord {
   id: string;
+  supplierCode?: string;
   name: string;
-  contactPerson: string;
+  contactPerson?: string;
   phone: string;
-  email: string;
+  email?: string;
+  address?: string;
+  creditLimit?: number;
+  creditDays?: number;
+  description?: string;
   creditBalance: number;
-  suppliedItems: string[];
+  suppliedItems?: string[];
 }
 
 export interface CashFlowRecord {
