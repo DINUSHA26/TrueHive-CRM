@@ -337,8 +337,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     return colors[hash % colors.length];
   };
 
-  // Helper to determine online / last seen status
-  const isOnline = activeChat?.unreadCount > 0 || activeChat?.isAiActive;
 
   return (
     <div className="w-full flex flex-col space-y-3">
@@ -649,21 +647,14 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                   {activeChat?.customerName?.charAt(0).toUpperCase() || "U"}
                 </div>
 
-                {/* User Name & Realtime Online / Last Seen status */}
+                {/* User Name & WhatsApp Phone */}
                 <div className="min-w-0 leading-tight">
                   <h3 className="text-sm font-semibold text-white truncate max-w-[150px]">
                     {activeChat?.customerName}
                   </h3>
-                  {isOnline ? (
-                    <span className="text-[11px] text-[#25D366] flex items-center gap-1 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
-                      online
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-[#8696a0] truncate block">
-                      last seen {activeChat?.lastMessageAt || "recently"}
-                    </span>
-                  )}
+                  <span className="text-[11px] text-[#8696a0] font-mono truncate block">
+                    {activeChat?.whatsappPhone}
+                  </span>
                 </div>
               </div>
 
@@ -1000,17 +991,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                     </h4>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-slate-400 font-mono">{activeChat.whatsappPhone}</span>
-                      <span className="text-slate-600">•</span>
-                      {isOnline ? (
-                        <span className="text-[11px] text-[#25D366] flex items-center gap-1 font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
-                          online
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-400">
-                          last seen {activeChat.lastMessageAt || "recently"}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
