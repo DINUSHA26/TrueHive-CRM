@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Layers,
   Lock,
   Mail,
   ArrowRight,
@@ -81,11 +80,15 @@ export default function LoginPage() {
           <div>
             {/* Business Brand */}
             <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                <Layers className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center p-1.5 shadow-lg shadow-amber-500/10">
+                <img
+                  src="/logo.png"
+                  alt="TrueHive Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-base font-bold text-white tracking-tight">Business Hub</h1>
+                <h1 className="text-base font-bold text-white tracking-tight">TrueHive</h1>
                 <p className="text-xs text-slate-400">Management Portal</p>
               </div>
             </div>

@@ -298,7 +298,7 @@ export async function runGeminiAgenticLoop(params: {
       const candidateModels = [configuredModel, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
       const uniqueModels = Array.from(new Set(candidateModels));
 
-      const systemInstruction = `You are Business Hub AI, an intelligent WhatsApp commerce & CRM assistant for our Sri Lankan business.
+      const systemInstruction = `You are TrueHive AI, an intelligent WhatsApp commerce & CRM assistant for our Sri Lankan business.
 Reply naturally, politely, and helpfully in Sinhala (or Singlish/English if the customer chats in English).
 Always use the search_products_and_live_stock tool to check real-time stock and prices in the database before quoting.
 When the customer wishes to buy or gives an address/quantity, call create_whatsapp_order.
@@ -443,7 +443,7 @@ Quote currency clearly as LKR or රු.`;
   const catalogLines = (parsedSearch.availableProducts || []).slice(0, 4).join("\n• ");
 
   return {
-    replyText: `ආයුබෝවන් ${params.customerName}! Business Hub වෙත සාදරයෙන් පිළිගනිමු. මේ වන විට අප සතුව ඇති සජීවී තොග:\n\n• ${catalogLines}\n\nඇණවුම් කිරීමට ඔබට අවශ්‍ය භාණ්ඩය සහ ලිපිනය අප වෙත එවන්න!`,
+    replyText: `ආයුබෝවන් ${params.customerName}! TrueHive වෙත සාදරයෙන් පිළිගනිමු. මේ වන විට අප සතුව ඇති සජීවී තොග:\n\n• ${catalogLines}\n\nඇණවුම් කිරීමට ඔබට අවශ්‍ය භාණ්ඩය සහ ලිපිනය අප වෙත එවන්න!`,
     executedTools,
     handoverTriggered: false,
   };

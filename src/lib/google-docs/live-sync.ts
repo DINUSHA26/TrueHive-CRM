@@ -32,7 +32,7 @@ export async function syncLiveGoogleDocsAndSheets(reportTitle?: string): Promise
   const totalOrderRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
   const totalOrderCogs = orders.reduce((sum, o) => sum + o.totalCogs, 0);
 
-  const aiNarrative = `Business Hub Live Executive Sync (${nowStr}): Active Orders recorded in Supabase totaled LKR ${totalOrderRevenue.toLocaleString()} with BOM COGS of LKR ${totalOrderCogs.toLocaleString()} (Gross Margin: ${(
+  const aiNarrative = `TrueHive Live Executive Sync (${nowStr}): Active Orders recorded in Supabase totaled LKR ${totalOrderRevenue.toLocaleString()} with BOM COGS of LKR ${totalOrderCogs.toLocaleString()} (Gross Margin: ${(
     ((totalOrderRevenue - totalOrderCogs) / Math.max(totalOrderRevenue, 1)) *
     100
   ).toFixed(1)}%). ${

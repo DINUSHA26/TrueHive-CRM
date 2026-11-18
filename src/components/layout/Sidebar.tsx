@@ -3,7 +3,6 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import {
-  Layers,
   PanelLeftClose,
   PanelLeftOpen,
   LayoutGrid,
@@ -218,13 +217,17 @@ export function Sidebar({
       {/* Top Brand Header */}
       <div className="flex items-center justify-between pb-2.5 border-b border-slate-800/80 px-1 shrink-0">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-md shadow-blue-500/20">
-            <Layers className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center shrink-0 p-1 shadow-sm shadow-amber-500/10">
+            <img
+              src="/logo.png"
+              alt="TrueHive Logo"
+              className="w-full h-full object-contain"
+            />
           </div>
           {!isCollapsed && (
             <div className="leading-tight truncate">
-              <h1 className="text-[14px] font-semibold text-white tracking-tight">
-                Business Hub
+              <h1 className="text-[14px] font-bold text-white tracking-tight">
+                TrueHive
               </h1>
               <p className="text-[10px] text-slate-400">Management Portal</p>
             </div>
