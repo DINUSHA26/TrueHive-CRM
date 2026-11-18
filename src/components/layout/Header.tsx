@@ -89,7 +89,7 @@ export function Header({
           <Menu className="w-5 h-5" />
         </button>
 
-        <div>
+        <div className="hidden sm:block">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-semibold tracking-wider uppercase text-blue-400">
               {meta.category}
