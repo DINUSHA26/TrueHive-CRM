@@ -554,21 +554,21 @@ export function CashFlowView({ overviewData, cashflow = [], onRefresh }: CashFlo
 
           {/* Cash Book Toolbar & Filters */}
           <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-            {/* Source Filters (All, POS, Credit, Petty Cash, Supplier AP, Manual) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap">
-              {["ALL", "POS", "CREDIT", "PETTY_CASH", "SUPPLIER_AP", "MANUAL"].map((src) => (
-                <button
-                  key={src}
-                  onClick={() => setSourceFilter(src)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${
-                    sourceFilter === src
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-950/80 border border-slate-800 text-slate-400 hover:text-white"
-                  }`}
-                >
-                  {src === "PETTY_CASH" ? "Petty Cash" : src === "SUPPLIER_AP" ? "Supplier AP" : src}
-                </button>
-              ))}
+            {/* Source Dropdown with Clear Description */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium text-slate-400 shrink-0">Cash Source:</span>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
+              >
+                <option value="ALL">All Cash Sources (Consolidated)</option>
+                <option value="POS">POS Retail Counter (Cash In)</option>
+                <option value="CREDIT">Customer Credit / AR (Cash In)</option>
+                <option value="PETTY_CASH">Petty Cash Imprest (Disbursements)</option>
+                <option value="SUPPLIER_AP">Supplier Purchases / AP (Cash Out)</option>
+                <option value="MANUAL">Manual Inflow / Outflow Records</option>
+              </select>
             </div>
 
             {/* Search Input */}

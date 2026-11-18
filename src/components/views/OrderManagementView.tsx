@@ -641,23 +641,22 @@ export function OrderManagementView({
               />
             </div>
 
-            {/* Fulfillment Status Filters */}
-            <div className="flex flex-wrap items-center gap-1.5 no-scrollbar">
-              {["ALL", "PENDING", "PROCESSING", "READY_TO_SHIP", "SHIPPED", "DELIVERED", "CANCELLED"].map(
-                (st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                      statusFilter === st
-                        ? "bg-slate-800 text-white border border-slate-700"
-                        : "text-slate-500 hover:text-slate-300 hover:bg-slate-900"
-                    }`}
-                  >
-                    {st === "READY_TO_SHIP" ? "Ready" : st}
-                  </button>
-                )
-              )}
+            {/* Fulfillment Status Dropdown */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-slate-400 shrink-0">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
+              >
+                <option value="ALL">All Order Statuses</option>
+                <option value="PENDING">Pending (Awaiting Confirmation)</option>
+                <option value="PROCESSING">Processing (Preparation & Packing)</option>
+                <option value="READY_TO_SHIP">Ready to Ship (Waybill Generated)</option>
+                <option value="SHIPPED">Shipped (Dispatched with Courier)</option>
+                <option value="DELIVERED">Delivered (Completed)</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
             </div>
           </div>
         </CardHeader>

@@ -147,20 +147,20 @@ export function LeadsView({ leads, onRefresh }: LeadsViewProps) {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {["ALL", "NEW", "CONTACTED", "SCHEDULED", "COMPLETED"].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStageFilter(st)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                stageFilter === st
-                  ? "bg-blue-600 text-white"
-                  : "bg-slate-800 text-slate-400 hover:text-white"
-              }`}
-            >
-              {st}
-            </button>
-          ))}
+        {/* Pipeline Stage Dropdown with Clear Description */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-medium text-slate-400 shrink-0">Stage:</span>
+          <select
+            value={stageFilter}
+            onChange={(e) => setStageFilter(e.target.value)}
+            className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
+          >
+            <option value="ALL">All Lead Stages</option>
+            <option value="NEW">New (Uncontacted Inquiries)</option>
+            <option value="CONTACTED">Contacted (In Discussion)</option>
+            <option value="SCHEDULED">Scheduled (Appointment Booked)</option>
+            <option value="COMPLETED">Completed / Converted</option>
+          </select>
         </div>
       </div>
 

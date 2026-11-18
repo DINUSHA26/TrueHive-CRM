@@ -332,20 +332,19 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 no-scrollbar">
-              {["ALL", "REGULAR", "WHOLESALE", "CORPORATE"].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setTypeFilter(type)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                    typeFilter === type
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  {type}
-                </button>
-              ))}
+            {/* Customer Type Dropdown with Clear Description */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-slate-400 shrink-0">Customer Type:</span>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 cursor-pointer shadow-sm"
+              >
+                <option value="ALL">All Customer Types</option>
+                <option value="REGULAR">Regular / Retail Customers</option>
+                <option value="WHOLESALE">Wholesale Buyers</option>
+                <option value="CORPORATE">Corporate / Business Clients</option>
+              </select>
             </div>
           </div>
         </CardHeader>

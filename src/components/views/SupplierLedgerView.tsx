@@ -532,40 +532,36 @@ export function SupplierLedgerView({
               />
             </div>
 
-            {/* Filter Pills */}
-            <div className="flex flex-wrap items-center gap-2 no-scrollbar">
-              <div className="flex items-center gap-1">
-                {["ALL", "DUE", "PARTIAL", "PAID", "OVERDUE"].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                      statusFilter === st
-                        ? "bg-emerald-600 text-white"
-                        : "bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800"
-                    }`}
-                  >
-                    {st}
-                  </button>
-                ))}
+            {/* Filter Dropdowns with Clear Labels */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Payment Status Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-slate-400 shrink-0">Status:</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
+                >
+                  <option value="ALL">All Payment Statuses</option>
+                  <option value="DUE">Due (Unpaid Bills)</option>
+                  <option value="PARTIAL">Partially Paid</option>
+                  <option value="PAID">Fully Paid</option>
+                  <option value="OVERDUE">Overdue (Past Term)</option>
+                </select>
               </div>
 
-              <div className="h-4 w-[1px] bg-slate-800 mx-1 hidden sm:block" />
-
-              <div className="flex items-center gap-1">
-                {["ALL", "PRODUCT", "INGREDIENT"].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setItemTypeFilter(type)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium whitespace-nowrap transition ${
-                      itemTypeFilter === type
-                        ? "bg-slate-700 text-white"
-                        : "text-slate-500 hover:text-slate-300"
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
+              {/* Item Type Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-medium text-slate-400 shrink-0">Item Type:</span>
+                <select
+                  value={itemTypeFilter}
+                  onChange={(e) => setItemTypeFilter(e.target.value)}
+                  className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500 cursor-pointer shadow-sm"
+                >
+                  <option value="ALL">All Item Categories</option>
+                  <option value="PRODUCT">Finished Products</option>
+                  <option value="INGREDIENT">Raw Ingredients</option>
+                </select>
               </div>
             </div>
           </div>

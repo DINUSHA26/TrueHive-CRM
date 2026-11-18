@@ -337,21 +337,20 @@ export function CustomerCreditView({ customers, onRefresh, onNavigate }: Custome
               />
             </div>
 
-            {/* Status Tabs */}
-            <div className="flex flex-wrap items-center gap-1.5 no-scrollbar">
-              {["ALL", "DUE", "PARTIAL", "PAID", "OVERDUE"].map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
-                    statusFilter === status
-                      ? "bg-indigo-600 text-white"
-                      : "bg-slate-800/60 text-slate-400 hover:text-white hover:bg-slate-800"
-                  }`}
-                >
-                  {status}
-                </button>
-              ))}
+            {/* Credit Bill Status Dropdown */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-medium text-slate-400 shrink-0">Status:</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 cursor-pointer shadow-sm"
+              >
+                <option value="ALL">All Credit Bills</option>
+                <option value="DUE">Due (Unsettled Invoices)</option>
+                <option value="PARTIAL">Partially Settled</option>
+                <option value="PAID">Fully Settled</option>
+                <option value="OVERDUE">Overdue (Past Credit Term)</option>
+              </select>
             </div>
           </div>
         </CardHeader>
