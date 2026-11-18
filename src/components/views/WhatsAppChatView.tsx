@@ -7,14 +7,21 @@ import {
   UserCheck,
   Send,
   Sparkles,
-  PhoneCall,
-  Clock,
-  Mic,
-  Image as ImageIcon,
   Search,
+  CheckCheck,
+  ArrowLeft,
+  Camera,
+  MoreVertical,
+  Smile,
+  Paperclip,
+  Archive,
+  MessageSquarePlus,
+  Radio,
   CheckCircle2,
+  RefreshCw,
+  Users,
+  Compass,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -27,12 +34,20 @@ interface WhatsAppChatViewProps {
   onMarkAsRead?: (chatId: string) => void;
 }
 
+type FilterChip = "ALL" | "UNREAD" | "AI_ACTIVE" | "HUMAN_AGENT";
+type MobileScreen = "LIST" | "CHAT";
+
 export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppChatViewProps) {
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || "");
+  const [mobileScreen, setMobileScreen] = useState<MobileScreen>("LIST");
+  const [filterChip, setFilterChip] = useState<FilterChip>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [replyText, setReplyText] = useState("");
   const [simText, setSimText] = useState("");
   const [simulating, setSimulating] = useState(false);
+  const [showSimModal, setShowSimModal] = useState(false);
+  const [mobileTab, setMobileTab] = useState<"CHATS" | "UPDATES" | "COMMUNITIES" | "AI_STUDIO">("CHATS");
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-sync selected chat if initial chats was empty
@@ -42,17 +57,24 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     }
   }, [chats, selectedChatId]);
 
+  // Filter chats by search query and filter chips
   const filteredChats = chats.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.customerName.toLowerCase().includes(q) ||
-      c.whatsappPhone.includes(q) ||
-      (c.lastMessageText && c.lastMessageText.toLowerCase().includes(q))
-    );
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const match =
+        c.customerName.toLowerCase().includes(q) ||
+        c.whatsappPhone.includes(q) ||
+        (c.lastMessageText && c.lastMessageText.toLowerCase().includes(q));
+      if (!match) return false;
+    }
+
+    if (filterChip === "UNREAD") return c.unreadCount > 0;
+    if (filterChip === "AI_ACTIVE") return c.isAiActive;
+    if (filterChip === "HUMAN_AGENT") return !c.isAiActive;
+    return true;
   });
 
-  const activeChat = chats.find((c) => c.id === selectedChatId) || filteredChats[0];
+  const activeChat = chats.find((c) => c.id === selectedChatId) || filteredChats[0] || chats[0];
 
   // Mark chat as read in both local state and backend database
   const markAsRead = useCallback(
@@ -74,7 +96,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     [onMarkAsRead]
   );
 
-  // Automatically mark active chat as seen when opened or selected
+  // Automatically mark active chat as seen when opened
   useEffect(() => {
     if (activeChat && activeChat.unreadCount > 0) {
       activeChat.unreadCount = 0;
@@ -108,10 +130,11 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [activeChat?.messages?.length]);
+  }, [activeChat?.messages?.length, mobileScreen]);
 
-  const handleSelectChat = (chatId: string) => {
+  const handleOpenChatOnMobile = (chatId: string) => {
     setSelectedChatId(chatId);
+    setMobileScreen("CHAT");
     const target = chats.find((c) => c.id === chatId);
     if (target) {
       target.unreadCount = 0;
@@ -184,7 +207,8 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     }
   };
 
-  const handleSimulateIncoming = async () => {
+  const handleSimulateIncoming = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!simText.trim() || !activeChat) return;
     setSimulating(true);
     try {
@@ -199,6 +223,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
         }),
       });
       setSimText("");
+      setShowSimModal(false);
       onRefresh();
     } catch (err) {
       console.error(err);
@@ -207,35 +232,466 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     }
   };
 
+  // Helper avatar letter color
+  const getAvatarBg = (name: string) => {
+    const colors = [
+      "bg-emerald-600",
+      "bg-blue-600",
+      "bg-purple-600",
+      "bg-amber-600",
+      "bg-rose-600",
+      "bg-teal-600",
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash += name.charCodeAt(i);
+    return colors[hash % colors.length];
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Top Info Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900/90 border border-slate-800">
+    <div className="w-full flex flex-col space-y-3">
+      {/* ========================================================
+          DESKTOP-ONLY: TOP INFO BANNER & REALTIME SYSTEM STATS
+          ======================================================== */}
+      <div className="hidden lg:flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 shrink-0">
+          <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 shrink-0">
             <MessageSquare className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white">Meta WhatsApp Cloud API Live Chat</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-bold text-white">Meta WhatsApp Cloud API Live Chat</h3>
+              <Badge variant="success" dot className="text-[10px]">
+                Live Webhook Connected
+              </Badge>
+            </div>
             <p className="text-xs text-slate-400">
-              Autonomous Gemini Agentic Tool Loop responds in real-time. Human agent handover toggles instantly.
+              Autonomous Gemini Agentic Tool Loop responds in real-time. Human agent takeover toggles instantly.
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="success" dot>
-            Cloud API Active
+          <Badge variant="primary" className="text-xs font-semibold">
+            Gemini 3.5 Flash Loop
           </Badge>
-          <Badge variant="primary">Gemini 3.5 Flash Loop</Badge>
+          <button
+            onClick={onRefresh}
+            className="p-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-400 hover:text-white transition"
+            title="Refresh Chats"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Main 2-Column Split: Chat Room List & Active Conversation */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 h-[calc(100vh-220px)] min-h-[500px]">
+      {/* ========================================================
+          MOBILE VIEW (SCREENS < LG): SCREEN 1 (LIST) & SCREEN 2 (CHAT)
+          ======================================================== */}
+      <div className="block lg:hidden w-full bg-[#0b141a] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative min-h-[640px] max-h-[88vh] flex flex-col">
+        {/* ========================================================
+            MOBILE SCREEN 1: WHATSAPP CHAT LIST (Matches Image 1)
+            ======================================================== */}
+        {mobileScreen === "LIST" && (
+          <div className="flex-1 flex flex-col h-full bg-[#0b141a]">
+            {/* Top WhatsApp Mobile App Bar */}
+            <div className="px-4 pt-3 pb-2 bg-[#0b141a] flex items-center justify-between border-b border-[#202c33]/60">
+              <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+                <span>WhatsApp</span>
+                <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse inline-block" />
+              </h1>
+              <div className="flex items-center gap-4 text-[#8696a0]">
+                <button
+                  type="button"
+                  onClick={() => setShowSimModal(true)}
+                  className="p-1 hover:text-white transition"
+                  title="Simulate Customer Message"
+                >
+                  <Sparkles className="w-5 h-5 text-emerald-400" />
+                </button>
+                <button type="button" className="p-1 hover:text-white transition">
+                  <Camera className="w-5 h-5" />
+                </button>
+                <button type="button" className="p-1 hover:text-white transition">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Meta AI Search Bar (Image 1) */}
+            <div className="px-3 py-2 bg-[#0b141a]">
+              <div className="relative flex items-center bg-[#202c33] rounded-full px-3.5 py-2">
+                <Search className="w-4 h-4 text-[#8696a0] mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Ask Meta AI or Search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-transparent text-xs text-white placeholder-[#8696a0] focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Filter Chips Bar (Image 1: All, Unread, Favourites, Groups -> All, Unread, AI Active, Human) */}
+            <div className="px-3 py-1 flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap border-b border-[#202c33]/40 pb-2">
+              <button
+                type="button"
+                onClick={() => setFilterChip("ALL")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition ${
+                  filterChip === "ALL"
+                    ? "bg-[#103629] text-[#25D366] border border-[#25D366]/40"
+                    : "bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterChip("UNREAD")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition ${
+                  filterChip === "UNREAD"
+                    ? "bg-[#103629] text-[#25D366] border border-[#25D366]/40"
+                    : "bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]"
+                }`}
+              >
+                Unread
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterChip("AI_ACTIVE")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition ${
+                  filterChip === "AI_ACTIVE"
+                    ? "bg-[#103629] text-[#25D366] border border-[#25D366]/40"
+                    : "bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]"
+                }`}
+              >
+                AI Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterChip("HUMAN_AGENT")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition ${
+                  filterChip === "HUMAN_AGENT"
+                    ? "bg-[#103629] text-[#25D366] border border-[#25D366]/40"
+                    : "bg-[#202c33] text-[#8696a0] hover:bg-[#2a3942]"
+                }`}
+              >
+                Staff Mode
+              </button>
+            </div>
+
+            {/* Archived Header Row (Image 1) */}
+            <div className="px-4 py-2.5 flex items-center justify-between text-xs text-[#8696a0] border-b border-[#202c33]/30">
+              <div className="flex items-center gap-3">
+                <Archive className="w-4 h-4 text-[#8696a0]" />
+                <span className="font-semibold text-white">Archived</span>
+              </div>
+              <span className="text-[11px] text-[#25D366] font-bold">Live Sync</span>
+            </div>
+
+            {/* Mobile Chat List Rows (Image 1) */}
+            <div className="flex-1 overflow-y-auto divide-y divide-[#202c33]/30 custom-scrollbar pb-16">
+              {filteredChats.length === 0 ? (
+                <div className="p-8 text-center text-xs text-[#8696a0]">
+                  No WhatsApp conversations match your criteria.
+                </div>
+              ) : (
+                filteredChats.map((chat) => {
+                  const avatarColor = getAvatarBg(chat.customerName);
+                  const isOutbound = chat.messages && chat.messages.length > 0
+                    ? chat.messages[chat.messages.length - 1].direction === "OUTBOUND"
+                    : true;
+
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => handleOpenChatOnMobile(chat.id)}
+                      className="w-full px-3.5 py-3 flex items-center gap-3 hover:bg-[#202c33]/50 active:bg-[#202c33] transition cursor-pointer"
+                    >
+                      {/* Avatar */}
+                      <div
+                        className={`w-12 h-12 rounded-full ${avatarColor} text-white font-bold text-base flex items-center justify-center shrink-0 shadow`}
+                      >
+                        {chat.customerName.charAt(0).toUpperCase() || "U"}
+                      </div>
+
+                      {/* Info & Snippet */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <h4 className="text-sm font-semibold text-white truncate max-w-[190px]">
+                            {chat.customerName}
+                          </h4>
+                          <span
+                            className={`text-[11px] shrink-0 ${
+                              chat.unreadCount > 0 ? "text-[#25D366] font-bold" : "text-[#8696a0]"
+                            }`}
+                          >
+                            {chat.lastMessageAt || "Recently"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-1">
+                          <p className="text-xs text-[#8696a0] truncate flex items-center gap-1">
+                            {isOutbound && (
+                              <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] shrink-0" />
+                            )}
+                            <span className="truncate">{chat.lastMessageText || "No messages yet"}</span>
+                          </p>
+
+                          {chat.unreadCount > 0 ? (
+                            <span className="w-5 h-5 rounded-full bg-[#25D366] text-[#0b141a] font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                              {chat.unreadCount}
+                            </span>
+                          ) : chat.isAiActive ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-semibold shrink-0">
+                              AI
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Floating Action Button (FAB - Green chat icon from Image 1) */}
+            <div className="absolute bottom-16 right-4 z-20">
+              <button
+                type="button"
+                onClick={() => setShowSimModal(true)}
+                className="w-13 h-13 p-3.5 rounded-2xl bg-[#00a884] hover:bg-[#00c59b] text-white shadow-xl shadow-emerald-500/30 flex items-center justify-center transition active:scale-95"
+                title="New Message / Test Loop"
+              >
+                <MessageSquarePlus className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Mobile Bottom Navigation Bar (Image 1: Chats, Updates, Communities, AI Studio) */}
+            <div className="h-14 bg-[#0b141a] border-t border-[#202c33] flex items-center justify-around px-2 z-10 shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileTab("CHATS")}
+                className="flex flex-col items-center gap-0.5"
+              >
+                <div className="px-3.5 py-0.5 rounded-full bg-[#103629] text-[#25D366]">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold text-[#25D366]">Chats</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileTab("UPDATES")}
+                className="flex flex-col items-center gap-0.5 text-[#8696a0] hover:text-white"
+              >
+                <Radio className="w-5 h-5" />
+                <span className="text-[10px]">Updates</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileTab("COMMUNITIES")}
+                className="flex flex-col items-center gap-0.5 text-[#8696a0] hover:text-white"
+              >
+                <Users className="w-5 h-5" />
+                <span className="text-[10px]">Communities</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowSimModal(true)}
+                className="flex flex-col items-center gap-0.5 text-[#8696a0] hover:text-white"
+              >
+                <Bot className="w-5 h-5 text-indigo-400" />
+                <span className="text-[10px] text-indigo-300">AI Studio</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================
+            MOBILE SCREEN 2: WHATSAPP CONVERSATION VIEW (Matches Image 2)
+            ======================================================== */}
+        {mobileScreen === "CHAT" && (
+          <div className="flex-1 flex flex-col h-full bg-[#0b141a]">
+            {/* Top WhatsApp Conversation Header (Image 2) */}
+            <div className="px-2 py-2.5 bg-[#1f2c34] flex items-center justify-between border-b border-[#202c33] shrink-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                {/* Back Arrow to return to Chat List */}
+                <button
+                  type="button"
+                  onClick={() => setMobileScreen("LIST")}
+                  className="p-1.5 rounded-full text-white hover:bg-[#2a3942] transition"
+                  title="Back to Chats"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                {/* Avatar */}
+                <div
+                  className={`w-9 h-9 rounded-full ${getAvatarBg(
+                    activeChat?.customerName || "U"
+                  )} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow`}
+                >
+                  {activeChat?.customerName?.charAt(0).toUpperCase() || "U"}
+                </div>
+
+                {/* Contact Name & Phone / Status */}
+                <div className="min-w-0 leading-tight">
+                  <h3 className="text-sm font-semibold text-white truncate max-w-[150px]">
+                    {activeChat?.customerName}
+                  </h3>
+                  <p className="text-[11px] text-[#8696a0] truncate font-mono">
+                    {activeChat?.whatsappPhone}
+                  </p>
+                </div>
+              </div>
+
+              {/* Header Right Actions (NO call / video buttons per explicit request!) */}
+              <div className="flex items-center gap-2">
+                {/* Handover Toggle Pill */}
+                <button
+                  type="button"
+                  onClick={() => activeChat && handleToggleHandover(activeChat)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold flex items-center gap-1 transition ${
+                    activeChat?.isAiActive
+                      ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40"
+                      : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                  }`}
+                  title={activeChat?.isAiActive ? "Switch to Staff Mode" : "Switch to Gemini AI Loop"}
+                >
+                  {activeChat?.isAiActive ? (
+                    <>
+                      <Bot className="w-3.5 h-3.5" />
+                      <span>AI Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>Staff</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowSimModal(true)}
+                  className="p-1.5 text-[#8696a0] hover:text-white"
+                  title="Simulate Customer Message"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                </button>
+
+                <button type="button" className="p-1 text-[#8696a0] hover:text-white">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Conversation Messages Canvas (Image 2 - Inbound slate bubbles, Outbound dark emerald bubbles with blue checkmarks) */}
+            <div
+              className="flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar bg-[#0b141a]"
+              style={{
+                backgroundImage:
+                  "radial-gradient(#1f2c34 0.75px, transparent 0.75px), radial-gradient(#1f2c34 0.75px, #0b141a 0.75px)",
+                backgroundSize: "30px 30px",
+                backgroundPosition: "0 0, 15px 15px",
+              }}
+            >
+              {/* Date Separator Pill (Image 2: "3 November 2026") */}
+              <div className="flex justify-center my-2">
+                <span className="px-3 py-1 rounded-lg bg-[#182229] border border-[#222e35] text-[11px] text-[#8696a0] font-medium shadow-sm">
+                  {activeChat?.lastMessageAt ? `Live Chat • ${activeChat.lastMessageAt}` : "Today"}
+                </span>
+              </div>
+
+              {activeChat?.messages?.map((msg) => {
+                const isCustomer = msg.senderType === "CUSTOMER";
+                const isAi = msg.senderType === "AI_BOT";
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isCustomer ? "items-start" : "items-end"} w-full`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-[13px] relative shadow-sm ${
+                        isCustomer
+                          ? "bg-[#202c33] text-white rounded-tl-none border border-[#2a3942]/40"
+                          : isAi
+                          ? "bg-[#005c4b] text-white rounded-tr-none border border-indigo-400/30"
+                          : "bg-[#005c4b] text-white rounded-tr-none"
+                      }`}
+                    >
+                      {/* AI Header if Bot generated */}
+                      {isAi && (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-300 mb-1">
+                          <Sparkles className="w-3 h-3 text-indigo-400" />
+                          <span>Gemini Agent Loop</span>
+                        </div>
+                      )}
+
+                      {/* Content */}
+                      <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+
+                      {/* Timestamp & Double Checkmarks (Image 2) */}
+                      <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#8696a0] select-none">
+                        <span>{msg.timestamp}</span>
+                        {!isCustomer && (
+                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] ml-0.5" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Bottom WhatsApp Input Bar (Matches Image 2: Smile, Input, Paperclip, Camera, Round Green Send) */}
+            <div className="p-2 bg-[#1f2c34] border-t border-[#202c33] flex items-center gap-2 shrink-0">
+              <div className="flex-1 flex items-center bg-[#2a3942] rounded-full px-3 py-1.5 gap-2">
+                <button type="button" className="text-[#8696a0] hover:text-white transition">
+                  <Smile className="w-5 h-5" />
+                </button>
+                <form onSubmit={handleSendReply} className="flex-1">
+                  <input
+                    type="text"
+                    placeholder="Message"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    className="w-full bg-transparent text-xs text-white placeholder-[#8696a0] focus:outline-none"
+                  />
+                </form>
+                <button type="button" className="text-[#8696a0] hover:text-white transition">
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <button type="button" className="text-[#8696a0] hover:text-white transition">
+                  <Camera className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Round Green Send Button (Image 2) */}
+              <button
+                type="button"
+                onClick={(e) => handleSendReply(e as any)}
+                className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#00c59b] text-white flex items-center justify-center shrink-0 shadow-lg transition active:scale-95"
+              >
+                <Send className="w-4 h-4 translate-x-0.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================
+          DESKTOP VIEW (SCREENS >= LG): WIDESCREEN 2-COLUMN LAYOUT
+          "kalin hadhapu eke ewa desktop view ekedhi dhiga athata dhanna eke adhala wena dhe yatathe dhanna"
+          ======================================================== */}
+      <div className="hidden lg:grid grid-cols-12 gap-4 h-[calc(100vh-230px)] min-h-[560px]">
         {/* Left Column: Conversations List (5 Cols) */}
-        <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800/80 rounded-2xl flex flex-col overflow-hidden">
-          {/* Search Bar */}
-          <div className="p-3 border-b border-slate-800/80">
+        <div className="col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-sm">
+          {/* Top Search & Filter Bar */}
+          <div className="p-3 border-b border-slate-800 space-y-2">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -243,46 +699,119 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 placeholder="Search chats by name or phone..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-slate-950/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
+            </div>
+
+            {/* Filter Tabs on Desktop */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar whitespace-nowrap pt-1">
+              <button
+                type="button"
+                onClick={() => setFilterChip("ALL")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  filterChip === "ALL"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-800/60 text-slate-400 hover:text-white"
+                }`}
+              >
+                All Chats
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterChip("UNREAD")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  filterChip === "UNREAD"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-800/60 text-slate-400 hover:text-white"
+                }`}
+              >
+                Unread
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterChip("AI_ACTIVE")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  filterChip === "AI_ACTIVE"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-800/60 text-slate-400 hover:text-white"
+                }`}
+              >
+                AI Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterChip("HUMAN_AGENT")}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  filterChip === "HUMAN_AGENT"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-slate-800/60 text-slate-400 hover:text-white"
+                }`}
+              >
+                Staff Mode
+              </button>
             </div>
           </div>
 
           {/* Conversation List */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
             {filteredChats.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">
+              <div className="p-8 text-center text-xs text-slate-400">
                 No chats match your search query.
               </div>
             ) : (
               filteredChats.map((chat) => {
                 const isSelected = activeChat?.id === chat.id;
+                const avatarColor = getAvatarBg(chat.customerName);
+                const isOutbound = chat.messages && chat.messages.length > 0
+                  ? chat.messages[chat.messages.length - 1].direction === "OUTBOUND"
+                  : true;
+
                 return (
                   <button
                     key={chat.id}
-                    onClick={() => handleSelectChat(chat.id)}
+                    onClick={() => {
+                      setSelectedChatId(chat.id);
+                      chat.unreadCount = 0;
+                      markAsRead(chat.id);
+                    }}
                     className={`w-full p-3.5 text-left flex items-start justify-between gap-3 transition ${
                       isSelected
-                        ? "bg-blue-600/15 border-l-4 border-blue-500"
+                        ? "bg-emerald-500/15 border-l-4 border-emerald-500"
                         : "hover:bg-slate-800/40"
                     }`}
                   >
+                    {/* Round Avatar */}
+                    <div
+                      className={`w-11 h-11 rounded-full ${avatarColor} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow mt-0.5`}
+                    >
+                      {chat.customerName.charAt(0).toUpperCase() || "U"}
+                    </div>
+
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="text-xs font-bold text-white truncate">
                           {chat.customerName}
                         </span>
-                        <span className="text-[10px] text-slate-400 shrink-0">
+                        <span
+                          className={`text-[10px] shrink-0 ${
+                            chat.unreadCount > 0 ? "text-emerald-400 font-bold" : "text-slate-400"
+                          }`}
+                        >
                           {chat.lastMessageAt || "Recently"}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 font-mono mb-1">{chat.whatsappPhone}</p>
-                      <p className="text-xs text-slate-300 truncate">{chat.lastMessageText}</p>
+                      <p className="text-xs text-slate-300 truncate flex items-center gap-1">
+                        {isOutbound && (
+                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] shrink-0" />
+                        )}
+                        <span className="truncate">{chat.lastMessageText || "No messages yet"}</span>
+                      </p>
                     </div>
 
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       {chat.unreadCount > 0 && (
-                        <span className="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-black flex items-center justify-center">
+                        <span className="w-5 h-5 rounded-full bg-[#25D366] text-slate-950 text-[10px] font-black flex items-center justify-center">
                           {chat.unreadCount}
                         </span>
                       )}
@@ -293,7 +822,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                             : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                         }`}
                       >
-                        {chat.isAiActive ? "AI Mode" : "Human Agent"}
+                        {chat.isAiActive ? "AI Mode" : "Staff"}
                       </span>
                     </div>
                   </button>
@@ -304,7 +833,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
         </div>
 
         {/* Right Column: Active Conversation (7 Cols) */}
-        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800/80 rounded-2xl flex flex-col overflow-hidden">
+        <div className="col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-sm">
           {!activeChat ? (
             <div className="flex-1 flex items-center justify-center p-6">
               <EmptyState
@@ -316,10 +845,14 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
           ) : (
             <>
               {/* Header */}
-              <div className="p-3.5 border-b border-slate-800/80 flex items-center justify-between gap-3 shrink-0">
+              <div className="p-3.5 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0 bg-slate-950/40">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold shrink-0">
-                    {activeChat.customerName.charAt(0) || "U"}
+                  <div
+                    className={`w-10 h-10 rounded-full ${getAvatarBg(
+                      activeChat.customerName
+                    )} text-white font-bold text-sm flex items-center justify-center shrink-0 shadow`}
+                  >
+                    {activeChat.customerName.charAt(0).toUpperCase() || "U"}
                   </div>
                   <div className="truncate">
                     <h4 className="text-sm font-bold text-white truncate">
@@ -334,8 +867,8 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                     onClick={() => handleToggleHandover(activeChat)}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition ${
                       activeChat.isAiActive
-                        ? "bg-indigo-600 hover:bg-indigo-500 text-white"
-                        : "bg-amber-600 hover:bg-amber-500 text-white"
+                        ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm"
+                        : "bg-amber-600 hover:bg-amber-500 text-white shadow-sm"
                     }`}
                   >
                     {activeChat.isAiActive ? (
@@ -346,46 +879,72 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                     ) : (
                       <>
                         <UserCheck className="w-3.5 h-3.5" />
-                        Human Active (Resume AI)
+                        Staff Active (Resume AI)
                       </>
                     )}
                   </button>
                 </div>
               </div>
 
-              {/* Message History */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar">
+              {/* Message History Canvas */}
+              <div
+                className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar bg-[#0b141a]"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(#1f2c34 0.75px, transparent 0.75px), radial-gradient(#1f2c34 0.75px, #0b141a 0.75px)",
+                  backgroundSize: "30px 30px",
+                  backgroundPosition: "0 0, 15px 15px",
+                }}
+              >
+                {/* Date separator pill */}
+                <div className="flex justify-center my-1">
+                  <span className="px-3 py-1 rounded-lg bg-[#182229] border border-[#222e35] text-[11px] text-[#8696a0] font-medium shadow-sm">
+                    {activeChat.lastMessageAt ? `Live Chat • ${activeChat.lastMessageAt}` : "Today"}
+                  </span>
+                </div>
+
                 {activeChat.messages.map((msg) => {
                   const isCustomer = msg.senderType === "CUSTOMER";
                   const isAi = msg.senderType === "AI_BOT";
+
                   return (
                     <div
                       key={msg.id}
                       className={`flex flex-col ${isCustomer ? "items-start" : "items-end"}`}
                     >
                       <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs ${
+                        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-xs shadow-md ${
                           isCustomer
-                            ? "bg-slate-800 text-slate-100 border border-slate-700/60 rounded-tl-none"
+                            ? "bg-[#202c33] text-white rounded-tl-none border border-[#2a3942]/50"
                             : isAi
-                            ? "bg-indigo-600/90 text-white rounded-tr-none shadow-md"
-                            : "bg-blue-600 text-white rounded-tr-none shadow-md"
+                            ? "bg-[#005c4b] text-white rounded-tr-none border border-indigo-400/40"
+                            : "bg-[#005c4b] text-white rounded-tr-none"
                         }`}
                       >
-                        <div className="flex items-center gap-1.5 mb-1 text-[10px] opacity-75">
+                        {/* Sender Label */}
+                        <div className="flex items-center gap-1.5 mb-1 text-[10px] opacity-80 select-none">
                           {isAi ? (
-                            <span className="flex items-center gap-1 font-bold">
-                              <Sparkles className="w-3 h-3" /> Gemini Agent
+                            <span className="flex items-center gap-1 font-bold text-indigo-300">
+                              <Sparkles className="w-3 h-3 text-indigo-400" /> Gemini Agent
                             </span>
                           ) : msg.senderType === "HUMAN_AGENT" ? (
-                            <span className="font-bold">Staff Agent</span>
+                            <span className="font-bold text-emerald-200">Staff Agent</span>
                           ) : (
-                            <span>{activeChat.customerName}</span>
+                            <span className="font-bold text-slate-300">{activeChat.customerName}</span>
                           )}
                           <span>•</span>
                           <span>{msg.timestamp}</span>
                         </div>
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
+
+                        {/* Content */}
+                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+
+                        {/* Double Checkmark for outbound messages */}
+                        {!isCustomer && (
+                          <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-emerald-200/80 select-none">
+                            <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -393,40 +952,47 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Reply Form & Simulation Toolbar */}
-              <div className="p-3 border-t border-slate-800/80 space-y-2 shrink-0">
+              {/* Bottom Reply Form & Simulation Controls placed cleanly underneath */}
+              <div className="p-3 border-t border-slate-800 space-y-2 shrink-0 bg-slate-950/60">
                 <form onSubmit={handleSendReply} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    placeholder="Type official WhatsApp reply to customer..."
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    className="flex-1 px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  />
+                  <div className="flex-1 flex items-center bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 gap-2">
+                    <Paperclip className="w-4 h-4 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Type official WhatsApp reply to customer..."
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      className="flex-1 bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
+                    />
+                  </div>
                   <Button
                     type="submit"
                     variant="primary"
                     size="sm"
+                    className="bg-[#00a884] hover:bg-[#00c59b] border-none text-white font-bold"
                     rightIcon={<Send className="w-3.5 h-3.5" />}
                   >
                     Send
                   </Button>
                 </form>
 
-                {/* Simulate incoming customer message for testing */}
-                <div className="flex items-center gap-2 pt-1 border-t border-slate-800/50">
+                {/* Simulate incoming customer message right under the relevant section */}
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                  <span className="text-[10px] text-slate-500 font-bold shrink-0 uppercase tracking-wider">
+                    Test Loop:
+                  </span>
                   <input
                     type="text"
                     placeholder="Simulate customer WhatsApp message (triggers Gemini Loop)..."
                     value={simText}
                     onChange={(e) => setSimText(e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 bg-slate-950/40 border border-slate-800/60 rounded-lg text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none"
+                    className="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800/80 rounded-lg text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
                   />
                   <Button
                     variant="secondary"
                     size="sm"
                     loading={simulating}
-                    onClick={handleSimulateIncoming}
+                    onClick={() => handleSimulateIncoming()}
                     className="text-xs"
                   >
                     Simulate
@@ -437,6 +1003,67 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
           )}
         </div>
       </div>
+
+      {/* ========================================================
+          SIMULATION MODAL / QUICK DRAWER (FOR TESTING GEMINI LOOP ON MOBILE)
+          ======================================================== */}
+      {showSimModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm rounded-2xl bg-slate-900 border border-slate-800 p-4 shadow-2xl space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                <Sparkles className="w-4 h-4" />
+                <span>Simulate Customer WhatsApp</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSimModal(false)}
+                className="text-slate-400 hover:text-white text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Send a test message as{" "}
+              <strong className="text-white">{activeChat?.customerName || "Customer"}</strong> (
+              <span className="font-mono text-emerald-400">{activeChat?.whatsappPhone}</span>). This will trigger
+              the live Gemini 3.5 Agentic Tool Loop.
+            </p>
+
+            <form onSubmit={handleSimulateIncoming} className="space-y-3">
+              <textarea
+                rows={3}
+                required
+                value={simText}
+                onChange={(e) => setSimText(e.target.value)}
+                placeholder="e.g. Can I order 2 chocolate cakes? Or what is my credit balance?"
+                className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-emerald-500"
+              />
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSimModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="sm"
+                  loading={simulating}
+                  className="bg-[#00a884] hover:bg-[#00c59b] border-none text-white font-bold"
+                >
+                  Trigger Gemini Loop
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
