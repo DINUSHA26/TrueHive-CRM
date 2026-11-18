@@ -4,66 +4,49 @@ import { verifyJwtToken, AUTH_COOKIE_NAME } from "@/lib/auth";
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // 1. Static assets & next internal files & public legal pages
+  // 1. Static assets, next internal files, public legal pages, and ALL API proxies
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/privacy") ||
     pathname.startsWith("/terms") ||
+    pathname.startsWith("/api") || // Let all API calls proxy directly to NestJS backend!
     pathname.includes(".")
   ) {
     return NextResponse.next();
   }
 
-  // 2. Allow webhook & public auth endpoints
-  if (
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/webhooks")
-  ) {
-    return NextResponse.next();
-  }
-
-  // 3. Verify user authentication token
-  const token = req.cookies.get(AUTH_COOKIE_NAME)?.value;
+  // 2. Verify user authentication token for portal pages
+  const token =
+    req.cookies.get(AUTH_COOKIE_NAME)?.value ||
+    req.cookies.get("truehive_auth_token")?.value;
   const payload = token ? await verifyJwtToken(token) : null;
 
-  // 4. Handle /login page specifically
+  // 3. Handle /login page specifically
   if (pathname === "/login" || pathname.startsWith("/login/")) {
-    // If already authenticated, redirect to portal dashboard (/)
     if (payload) {
       const homeUrl = req.nextUrl.clone();
       homeUrl.pathname = "/";
       homeUrl.search = "";
       return NextResponse.redirect(homeUrl);
     }
-    // If not authenticated, allow viewing login page
     return NextResponse.next();
   }
 
-  // 5. If not authenticated, protect all other pages and APIs
+  // 4. If not authenticated, redirect portal page visits to /login
   if (!payload) {
-    // If it's an API request, return 401 Unauthorized JSON
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json(
-        { error: "Unauthorized. Please log in first." },
-        { status: 401 }
-      );
-    }
-    // For all portal pages (/, /dashboard, /pos, etc.), redirect to /login
     const loginUrl = req.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.search = "";
     return NextResponse.redirect(loginUrl);
   }
 
-  // 6. User is authenticated -> attach role header and proceed
-  const res = NextResponse.next();
-  res.headers.set("x-user-role", payload.role);
-  res.headers.set("x-user-id", payload.userId);
-  return res;
+  // 5. User is authenticated -> proceed
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };
-
