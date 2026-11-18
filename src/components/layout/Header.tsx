@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   Menu,
-  Database,
+  Sun,
+  Moon,
   RefreshCw,
   Bell,
   ShoppingCart,
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { useTheme } from "@/components/ThemeProvider";
 import type { NavKey } from "./Sidebar";
 
 interface HeaderProps {
@@ -54,6 +56,7 @@ export function Header({
   unreadChatsCount = 0,
   onLogout,
 }: HeaderProps) {
+  const { theme, toggleTheme } = useTheme();
   const [timeString, setTimeString] = useState<string>("");
 
   useEffect(() => {
@@ -102,12 +105,24 @@ export function Header({
 
       {/* Right: Real-time Status & Quick Actions */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Supabase PostgreSQL Status Indicator */}
-        <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="font-medium">Supabase Live</span>
-        </div>
+        {/* Dark Mode / Light Mode Switcher (Replacing Supabase Live) */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          aria-label="Toggle dark/light theme"
+          className={`theme-toggle-btn p-2 rounded-xl border transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center shrink-0 ${
+            theme === "dark"
+              ? "bg-[#182133] hover:bg-[#1e293b] border-slate-700/80 text-amber-400 shadow-sm"
+              : "!bg-white hover:!bg-slate-100 !border-slate-200 !text-slate-800 shadow-sm"
+          }`}
+        >
+          {theme === "dark" ? (
+            <Sun className="w-4 h-4 text-amber-400 fill-amber-400/20 hover:rotate-45 transition-transform duration-300" />
+          ) : (
+            <Moon className="w-4 h-4 !text-slate-800 !fill-slate-800/10 hover:-rotate-12 transition-transform duration-300" />
+          )}
+        </button>
 
         {/* Live Clock */}
         {timeString && (
