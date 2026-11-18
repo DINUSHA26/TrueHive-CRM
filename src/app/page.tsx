@@ -15,6 +15,8 @@ import { SupplierManagementView } from "@/components/views/SupplierManagementVie
 import { CashFlowView } from "@/components/views/CashFlowView";
 import { ReportsView } from "@/components/views/ReportsView";
 import { SettingsView } from "@/components/views/SettingsView";
+import { CustomerCreditView } from "@/components/views/CustomerCreditView";
+import { SupplierLedgerView } from "@/components/views/SupplierLedgerView";
 import { OfficialA4InvoiceModal } from "@/components/OfficialA4InvoiceModal";
 import type {
   ProductItem,
@@ -251,6 +253,14 @@ export default function TrueHiveWorkspace() {
         />
       )}
 
+      {activeNav === "CUSTOMER_CREDIT" && (
+        <CustomerCreditView
+          customers={customers}
+          onRefresh={fetchAllData}
+          onNavigate={setActiveNav}
+        />
+      )}
+
       {activeNav === "LEADS" && (
         <LeadsView leads={leads} onRefresh={fetchAllData} />
       )}
@@ -291,6 +301,16 @@ export default function TrueHiveWorkspace() {
           suppliers={suppliers}
           ingredients={ingredients}
           onRefresh={fetchAllData}
+        />
+      )}
+
+      {activeNav === "SUPPLIER_LEDGER" && (
+        <SupplierLedgerView
+          suppliers={suppliers}
+          products={products}
+          ingredients={ingredients}
+          onRefresh={fetchAllData}
+          onNavigate={setActiveNav}
         />
       )}
 

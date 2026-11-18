@@ -245,6 +245,12 @@ export function PosPanelView({
   // Checkout
   const handleCheckout = async () => {
     if (cart.length === 0) return;
+
+    if (paymentMethod === "Credit" && (!customerPhone.trim() || customerPhone.trim() === "POS-Counter")) {
+      alert("Please provide the customer's contact phone number to process a Credit Sale.");
+      return;
+    }
+
     setCheckingOut(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("truehive_token") : null;

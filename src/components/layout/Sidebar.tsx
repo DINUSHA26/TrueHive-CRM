@@ -21,18 +21,22 @@ import {
   UserCircle2,
   LogOut,
   X,
+  CreditCard,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export type NavKey =
   | "OVERVIEW"
   | "WHATSAPP_CHAT"
   | "CRM"
+  | "CUSTOMER_CREDIT"
   | "LEADS"
   | "ANNOUNCEMENTS"
   | "POS_PANEL"
   | "PRODUCT_INVENTORY"
   | "ORDER_MANAGEMENT"
   | "SUPPLIER_MANAGEMENT"
+  | "SUPPLIER_LEDGER"
   | "CASH_FLOW"
   | "REPORTS"
   | "SETTINGS";
@@ -75,6 +79,11 @@ export const NAV_SECTIONS: NavSection[] = [
         icon: Users,
       },
       {
+        key: "CUSTOMER_CREDIT",
+        label: "Credit Bills (AR)",
+        icon: CreditCard,
+      },
+      {
         key: "LEADS",
         label: "Leads",
         icon: UserPlus,
@@ -111,6 +120,11 @@ export const NAV_SECTIONS: NavSection[] = [
         label: "Supplier Management",
         icon: Truck,
       },
+      {
+        key: "SUPPLIER_LEDGER",
+        label: "Supplier Ledger (AP)",
+        icon: FileSpreadsheet,
+      },
     ],
   },
   {
@@ -144,12 +158,14 @@ export const NAV_ROUTES: Record<NavKey, string> = {
   OVERVIEW: "/",
   WHATSAPP_CHAT: "/chats",
   CRM: "/crm",
+  CUSTOMER_CREDIT: "/crm",
   LEADS: "/leads",
   ANNOUNCEMENTS: "/marketing",
   POS_PANEL: "/pos",
   PRODUCT_INVENTORY: "/products",
   ORDER_MANAGEMENT: "/orders",
   SUPPLIER_MANAGEMENT: "/suppliers",
+  SUPPLIER_LEDGER: "/suppliers",
   CASH_FLOW: "/cashflow",
   REPORTS: "/reports",
   SETTINGS: "/settings",
