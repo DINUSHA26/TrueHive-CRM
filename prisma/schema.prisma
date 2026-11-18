@@ -648,3 +648,80 @@ model SupplierBillPayment {
   supplier      Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 }
 
+// ==========================================
+// 10. PETTY CASH & CASH FLOW MANAGEMENT
+// ==========================================
+
+model PettyCashFund {
+  id             String             @id @default(cuid())
+  name           String             // e.g. "Main Office Petty Cash", "Retail Counter Fund"
+  branch         String             @default("Head Office")
+  custodian      String             // Custodian in charge, e.g. "Dinusha (Finance)"
+  currency       String             @default("LKR")
+  floatLimit     Float              @default(10000) // Authorized imprest float limit
+  voucherLimit   Float              @default(3000)  // Single voucher threshold limit
+  currentBalance Float              @default(10000) // Current available cash balance
+  isActive       Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  vouchers       PettyCashVoucher[]
+  cashCounts     PettyCashCount[]
+}
+
+model PettyCashVoucher {
+  id              String         @id @default(cuid())
+  voucherCode     String         @unique // e.g. "PC-001", "PC-002"
+  fundId          String
+  category        String         // Stationery, Refreshments, Transport, Printing, Cleaning, Maintenance, Other
+  amount          Float
+  payee           String         // Person or vendor paid
+  purpose         String         // Business reason / description
+  receiptUrl      String?        // Attached bill / receipt slip
+  status          String         @default("SUBMITTED") // DRAFT, SUBMITTED, APPROVED, PAID, REJECTED
+  requestedBy     String?
+  approvedBy      String?
+  rejectionReason String?
+  paidAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  fund            PettyCashFund  @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@index([fundId, status])
+}
+
+model PettyCashCount {
+  id              String        @id @default(cuid())
+  fundId          String
+  expectedBalance Float
+  countedBalance  Float
+  variance        Float         @default(0) // counted - expected (shortage is negative)
+  denominations   Json?         // { note5000: 1, note1000: 1, note500: 1, ... }
+  notes           String?
+  countedBy       String
+  reviewedBy      String?
+  status          String        @default("VERIFIED") // VERIFIED, VARIANCE_INVESTIGATING
+  createdAt       DateTime      @default(now())
+
+  fund            PettyCashFund @relation(fields: [fundId], references: [id], onDelete: Cascade)
+
+  @@index([fundId, createdAt])
+}
+
+model FundTransfer {
+  id           String   @id @default(cuid())
+  transferCode String   @unique // e.g. "TRF-1001"
+  fromAccount  String   // e.g. "Commercial Bank Account", "POS Till"
+  toAccount    String   // e.g. "Main Office Petty Cash"
+  amount       Float
+  reference    String?  // Cheque # or Bank Ref
+  description  String?
+  status       String   @default("COMPLETED")
+  recordedBy   String?
+  transferDate DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([transferDate])
+}
+

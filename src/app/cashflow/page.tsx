@@ -6,7 +6,7 @@ import { CashFlowView } from "@/components/views/CashFlowView";
 import type { CashFlowRecord } from "@/lib/store";
 
 export default function CashFlowPage() {
-  const [cashflow, setCashflow] = useState<CashFlowRecord[]>([]);
+  const [overviewData, setOverviewData] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string }>({
     name: "Administrator",
@@ -18,9 +18,9 @@ export default function CashFlowPage() {
     try {
       const res = await fetch("/api/finance");
       const data = await res.json();
-      if (data.cashflow) setCashflow(data.cashflow);
+      if (data) setOverviewData(data);
     } catch (err) {
-      console.error("Failed to load cash flow records:", err);
+      console.error("Failed to load finance & cash flow overview:", err);
     } finally {
       setIsRefreshing(false);
     }
@@ -53,7 +53,7 @@ export default function CashFlowPage() {
       currentUser={currentUser}
       onLogout={handleLogout}
     >
-      <CashFlowView cashflow={cashflow} onRefresh={fetchData} />
+      <CashFlowView overviewData={overviewData} onRefresh={fetchData} />
     </DashboardLayout>
   );
 }
