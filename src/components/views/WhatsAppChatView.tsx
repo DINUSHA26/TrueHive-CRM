@@ -9,18 +9,18 @@ import {
   Sparkles,
   Search,
   CheckCheck,
+  Check,
   ArrowLeft,
-  Camera,
   MoreVertical,
   Smile,
   Paperclip,
   Archive,
   MessageSquarePlus,
   Radio,
-  CheckCircle2,
-  RefreshCw,
   Users,
-  Compass,
+  RefreshCw,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -36,6 +36,47 @@ interface WhatsAppChatViewProps {
 
 type FilterChip = "ALL" | "UNREAD" | "AI_ACTIVE" | "HUMAN_AGENT";
 type MobileScreen = "LIST" | "CHAT";
+
+/**
+ * WhatsApp Delivery & Read Status Ticks Component
+ * 1 Grey Tick: Sent (Data Off / Server received)
+ * 2 Grey Ticks: Delivered (Data On / Delivered to phone)
+ * 2 Blue Ticks: Read / Seen by Customer
+ */
+function MessageTicks({
+  direction,
+  status,
+}: {
+  direction: "INBOUND" | "OUTBOUND";
+  status?: "SENT" | "DELIVERED" | "READ";
+}) {
+  if (direction === "INBOUND") return null;
+
+  // Single grey tick: Sent (Customer phone data is off)
+  if (status === "SENT") {
+    return (
+      <span title="Sent (Customer data off)" className="inline-flex items-center ml-1">
+        <Check className="w-3.5 h-3.5 text-slate-400" />
+      </span>
+    );
+  }
+
+  // Double grey ticks: Delivered (Customer phone data is on)
+  if (status === "DELIVERED") {
+    return (
+      <span title="Delivered (Data on)" className="inline-flex items-center ml-1">
+        <CheckCheck className="w-3.5 h-3.5 text-slate-400" />
+      </span>
+    );
+  }
+
+  // Double blue ticks: Read / Seen by customer (Default for seen/replied messages)
+  return (
+    <span title="Read / Seen" className="inline-flex items-center ml-1">
+      <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
+    </span>
+  );
+}
 
 export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppChatViewProps) {
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || "");
@@ -75,6 +116,42 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   });
 
   const activeChat = chats.find((c) => c.id === selectedChatId) || filteredChats[0] || chats[0];
+
+  // Browser / Phone Back Button Support:
+  // When inside mobile chat screen, pressing hardware back or browser back returns to LIST instead of home!
+  useEffect(() => {
+    const handlePopState = () => {
+      if (mobileScreen === "CHAT") {
+        setMobileScreen("LIST");
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [mobileScreen]);
+
+  const handleOpenChatOnMobile = (chatId: string) => {
+    setSelectedChatId(chatId);
+    setMobileScreen("CHAT");
+
+    // Push browser history state so mobile back button returns to chat list safely
+    if (typeof window !== "undefined") {
+      window.history.pushState({ screen: "chat", chatId }, "", `#chat-${chatId}`);
+    }
+
+    const target = chats.find((c) => c.id === chatId);
+    if (target) {
+      target.unreadCount = 0;
+      markAsRead(chatId);
+    }
+  };
+
+  const handleBackToChatList = () => {
+    if (typeof window !== "undefined" && window.location.hash.startsWith("#chat-")) {
+      window.history.back();
+    } else {
+      setMobileScreen("LIST");
+    }
+  };
 
   // Mark chat as read in both local state and backend database
   const markAsRead = useCallback(
@@ -132,16 +209,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [activeChat?.messages?.length, mobileScreen]);
 
-  const handleOpenChatOnMobile = (chatId: string) => {
-    setSelectedChatId(chatId);
-    setMobileScreen("CHAT");
-    const target = chats.find((c) => c.id === chatId);
-    if (target) {
-      target.unreadCount = 0;
-      markAsRead(chatId);
-    }
-  };
-
   const handleToggleHandover = async (chat: ChatThread) => {
     chat.isAiActive = !chat.isAiActive;
     try {
@@ -164,10 +231,28 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     e.preventDefault();
     if (!replyText.trim() || !activeChat) return;
 
+    // Requirement: When AI is active, staff replying must switch to Staff Mode!
+    if (activeChat.isAiActive) {
+      activeChat.isAiActive = false;
+      try {
+        await fetch("/api/crm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "TOGGLE_HANDOVER",
+            chatId: activeChat.id,
+            isAiActive: false,
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to auto-handover to staff:", err);
+      }
+    }
+
     const messageText = replyText.trim();
     setReplyText("");
 
-    // Optimistically show message immediately
+    // Optimistically show message immediately with 1 Grey Tick (SENT)
     const optimisticMessage = {
       id: `local-${Date.now()}`,
       direction: "OUTBOUND" as const,
@@ -180,7 +265,9 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
         minute: "2-digit",
         hour12: true,
       }),
+      status: "SENT" as "SENT" | "DELIVERED" | "READ", // 1 Tick: sent to server, awaiting delivery
     };
+
     if (activeChat.messages) {
       activeChat.messages.push(optimisticMessage);
     }
@@ -201,6 +288,9 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
           text: messageText,
         }),
       });
+
+      // Update tick to DELIVERED (2 grey ticks)
+      optimisticMessage.status = "DELIVERED";
       onRefresh();
     } catch (err) {
       console.error(err);
@@ -247,10 +337,13 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     return colors[hash % colors.length];
   };
 
+  // Helper to determine online / last seen status
+  const isOnline = activeChat?.unreadCount > 0 || activeChat?.isAiActive;
+
   return (
     <div className="w-full flex flex-col space-y-3">
       {/* ========================================================
-          DESKTOP-ONLY: TOP INFO BANNER & REALTIME SYSTEM STATS
+          DESKTOP & TABLET TOP BANNER: CLOUD API STATUS & GEMINI STATS
           ======================================================== */}
       <div className="hidden lg:flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
@@ -286,19 +379,39 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
       {/* ========================================================
           MOBILE VIEW (SCREENS < LG): SCREEN 1 (LIST) & SCREEN 2 (CHAT)
           ======================================================== */}
-      <div className="block lg:hidden w-full bg-[#0b141a] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl relative min-h-[640px] max-h-[88vh] flex flex-col">
+      <div className="block lg:hidden w-full">
         {/* ========================================================
             MOBILE SCREEN 1: WHATSAPP CHAT LIST (Matches Image 1)
             ======================================================== */}
         {mobileScreen === "LIST" && (
-          <div className="flex-1 flex flex-col h-full bg-[#0b141a]">
-            {/* Top WhatsApp Mobile App Bar */}
+          <div className="w-full bg-[#0b141a] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col min-h-[640px] max-h-[86vh]">
+            {/* Top Desktop Feature Sync Banner on Mobile */}
+            <div className="px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-[11px]">
+              <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>Cloud API Live</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full font-bold">
+                  Gemini Loop
+                </span>
+                <button
+                  onClick={onRefresh}
+                  className="text-slate-400 hover:text-white p-1"
+                  title="Refresh Chats"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Top WhatsApp Mobile App Bar (Camera removed per instruction) */}
             <div className="px-4 pt-3 pb-2 bg-[#0b141a] flex items-center justify-between border-b border-[#202c33]/60">
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <span>WhatsApp</span>
                 <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse inline-block" />
               </h1>
-              <div className="flex items-center gap-4 text-[#8696a0]">
+              <div className="flex items-center gap-3 text-[#8696a0]">
                 <button
                   type="button"
                   onClick={() => setShowSimModal(true)}
@@ -308,15 +421,12 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                   <Sparkles className="w-5 h-5 text-emerald-400" />
                 </button>
                 <button type="button" className="p-1 hover:text-white transition">
-                  <Camera className="w-5 h-5" />
-                </button>
-                <button type="button" className="p-1 hover:text-white transition">
                   <MoreVertical className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Meta AI Search Bar (Image 1) */}
+            {/* Meta AI Search Bar */}
             <div className="px-3 py-2 bg-[#0b141a]">
               <div className="relative flex items-center bg-[#202c33] rounded-full px-3.5 py-2">
                 <Search className="w-4 h-4 text-[#8696a0] mr-2 shrink-0" />
@@ -330,7 +440,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               </div>
             </div>
 
-            {/* Filter Chips Bar (Image 1: All, Unread, Favourites, Groups -> All, Unread, AI Active, Human) */}
+            {/* Filter Chips Bar (All, Unread, AI Mode, Staff Mode) */}
             <div className="px-3 py-1 flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap border-b border-[#202c33]/40 pb-2">
               <button
                 type="button"
@@ -378,8 +488,8 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               </button>
             </div>
 
-            {/* Archived Header Row (Image 1) */}
-            <div className="px-4 py-2.5 flex items-center justify-between text-xs text-[#8696a0] border-b border-[#202c33]/30">
+            {/* Archived Header Row */}
+            <div className="px-4 py-2 flex items-center justify-between text-xs text-[#8696a0] border-b border-[#202c33]/30">
               <div className="flex items-center gap-3">
                 <Archive className="w-4 h-4 text-[#8696a0]" />
                 <span className="font-semibold text-white">Archived</span>
@@ -387,7 +497,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               <span className="text-[11px] text-[#25D366] font-bold">Live Sync</span>
             </div>
 
-            {/* Mobile Chat List Rows (Image 1) */}
+            {/* Mobile Chat List Rows */}
             <div className="flex-1 overflow-y-auto divide-y divide-[#202c33]/30 custom-scrollbar pb-16">
               {filteredChats.length === 0 ? (
                 <div className="p-8 text-center text-xs text-[#8696a0]">
@@ -396,9 +506,8 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               ) : (
                 filteredChats.map((chat) => {
                   const avatarColor = getAvatarBg(chat.customerName);
-                  const isOutbound = chat.messages && chat.messages.length > 0
-                    ? chat.messages[chat.messages.length - 1].direction === "OUTBOUND"
-                    : true;
+                  const lastMsg = chat.messages?.[chat.messages.length - 1];
+                  const isOutbound = lastMsg ? lastMsg.direction === "OUTBOUND" : true;
 
                   return (
                     <div
@@ -429,11 +538,14 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                         </div>
 
                         <div className="flex items-center justify-between gap-1">
-                          <p className="text-xs text-[#8696a0] truncate flex items-center gap-1">
+                          <p className="text-xs text-[#8696a0] truncate flex items-center gap-0.5">
                             {isOutbound && (
-                              <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] shrink-0" />
+                              <MessageTicks
+                                direction="OUTBOUND"
+                                status={lastMsg?.status || "READ"}
+                              />
                             )}
-                            <span className="truncate">{chat.lastMessageText || "No messages yet"}</span>
+                            <span className="truncate ml-1">{chat.lastMessageText || "No messages yet"}</span>
                           </p>
 
                           {chat.unreadCount > 0 ? (
@@ -453,7 +565,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               )}
             </div>
 
-            {/* Floating Action Button (FAB - Green chat icon from Image 1) */}
+            {/* Floating Action Button (FAB - Green chat icon) */}
             <div className="absolute bottom-16 right-4 z-20">
               <button
                 type="button"
@@ -465,7 +577,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               </button>
             </div>
 
-            {/* Mobile Bottom Navigation Bar (Image 1: Chats, Updates, Communities, AI Studio) */}
+            {/* Mobile Bottom Navigation Bar */}
             <div className="h-14 bg-[#0b141a] border-t border-[#202c33] flex items-center justify-around px-2 z-10 shrink-0">
               <button
                 type="button"
@@ -509,19 +621,21 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
         )}
 
         {/* ========================================================
-            MOBILE SCREEN 2: WHATSAPP CONVERSATION VIEW (Matches Image 2)
+            MOBILE SCREEN 2: FIXED FULLSCREEN CONVERSATION VIEW
+            Fixes: Header permanently sticky at top, user info clearly visible,
+            Back button returns safely to list, Middle scrolls perfectly!
             ======================================================== */}
         {mobileScreen === "CHAT" && (
-          <div className="flex-1 flex flex-col h-full bg-[#0b141a]">
-            {/* Top WhatsApp Conversation Header (Image 2) */}
-            <div className="px-2 py-2.5 bg-[#1f2c34] flex items-center justify-between border-b border-[#202c33] shrink-0">
+          <div className="fixed inset-0 z-50 bg-[#0b141a] text-slate-100 flex flex-col h-[100dvh] w-full overflow-hidden animate-fade-in">
+            {/* Top WhatsApp Conversation Header (Sticky at top, always visible) */}
+            <div className="px-2 py-2.5 bg-[#1f2c34] flex items-center justify-between border-b border-[#202c33] shrink-0 sticky top-0 z-30 shadow-md">
               <div className="flex items-center gap-1.5 min-w-0">
-                {/* Back Arrow to return to Chat List */}
+                {/* Back Arrow button to return to Chat List without reloading home */}
                 <button
                   type="button"
-                  onClick={() => setMobileScreen("LIST")}
-                  className="p-1.5 rounded-full text-white hover:bg-[#2a3942] transition"
-                  title="Back to Chats"
+                  onClick={handleBackToChatList}
+                  className="p-1.5 rounded-full text-white hover:bg-[#2a3942] transition active:scale-90"
+                  title="Back to Chat List"
                 >
                   <ArrowLeft className="w-5 h-5" />
                 </button>
@@ -535,19 +649,26 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                   {activeChat?.customerName?.charAt(0).toUpperCase() || "U"}
                 </div>
 
-                {/* Contact Name & Phone / Status */}
+                {/* User Name & Realtime Online / Last Seen status */}
                 <div className="min-w-0 leading-tight">
                   <h3 className="text-sm font-semibold text-white truncate max-w-[150px]">
                     {activeChat?.customerName}
                   </h3>
-                  <p className="text-[11px] text-[#8696a0] truncate font-mono">
-                    {activeChat?.whatsappPhone}
-                  </p>
+                  {isOnline ? (
+                    <span className="text-[11px] text-[#25D366] flex items-center gap-1 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
+                      online
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#8696a0] truncate block">
+                      last seen {activeChat?.lastMessageAt || "recently"}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {/* Header Right Actions (NO call / video buttons per explicit request!) */}
-              <div className="flex items-center gap-2">
+              {/* Header Right Actions (Camera & Calls removed) */}
+              <div className="flex items-center gap-2 shrink-0">
                 {/* Handover Toggle Pill */}
                 <button
                   type="button"
@@ -562,12 +683,12 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                   {activeChat?.isAiActive ? (
                     <>
                       <Bot className="w-3.5 h-3.5" />
-                      <span>AI Active</span>
+                      <span>AI Mode</span>
                     </>
                   ) : (
                     <>
                       <UserCheck className="w-3.5 h-3.5" />
-                      <span>Staff</span>
+                      <span>Staff Mode</span>
                     </>
                   )}
                 </button>
@@ -587,7 +708,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               </div>
             </div>
 
-            {/* Conversation Messages Canvas (Image 2 - Inbound slate bubbles, Outbound dark emerald bubbles with blue checkmarks) */}
+            {/* Conversation Messages Canvas (Middle scrollable area) */}
             <div
               className="flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar bg-[#0b141a]"
               style={{
@@ -597,7 +718,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 backgroundPosition: "0 0, 15px 15px",
               }}
             >
-              {/* Date Separator Pill (Image 2: "3 November 2026") */}
+              {/* Date Separator Pill */}
               <div className="flex justify-center my-2">
                 <span className="px-3 py-1 rounded-lg bg-[#182229] border border-[#222e35] text-[11px] text-[#8696a0] font-medium shadow-sm">
                   {activeChat?.lastMessageAt ? `Live Chat • ${activeChat.lastMessageAt}` : "Today"}
@@ -633,11 +754,14 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                       {/* Content */}
                       <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
-                      {/* Timestamp & Double Checkmarks (Image 2) */}
+                      {/* Timestamp & Accurate WhatsApp Delivery / Read Ticks */}
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#8696a0] select-none">
                         <span>{msg.timestamp}</span>
                         {!isCustomer && (
-                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] ml-0.5" />
+                          <MessageTicks
+                            direction="OUTBOUND"
+                            status={msg.status || "READ"}
+                          />
                         )}
                       </div>
                     </div>
@@ -647,8 +771,25 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Bottom WhatsApp Input Bar (Matches Image 2: Smile, Input, Paperclip, Camera, Round Green Send) */}
-            <div className="p-2 bg-[#1f2c34] border-t border-[#202c33] flex items-center gap-2 shrink-0">
+            {/* Bottom Warning if AI Mode is Active (Requirement: Staff must switch to staff mode to reply) */}
+            {activeChat?.isAiActive && (
+              <div className="px-3 py-2 bg-indigo-950/80 border-t border-indigo-800/50 flex items-center justify-between text-xs text-indigo-200 shrink-0">
+                <span className="flex items-center gap-1.5 truncate">
+                  <Bot className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="truncate">AI Bot is active. Type reply to switch to Staff Mode.</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleHandover(activeChat)}
+                  className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-[10px] shrink-0 ml-2"
+                >
+                  Take Over
+                </button>
+              </div>
+            )}
+
+            {/* Bottom WhatsApp Input Bar (Camera removed per instruction) */}
+            <div className="p-2 bg-[#1f2c34] border-t border-[#202c33] flex items-center gap-2 shrink-0 sticky bottom-0 z-30">
               <div className="flex-1 flex items-center bg-[#2a3942] rounded-full px-3 py-1.5 gap-2">
                 <button type="button" className="text-[#8696a0] hover:text-white transition">
                   <Smile className="w-5 h-5" />
@@ -665,12 +806,9 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 <button type="button" className="text-[#8696a0] hover:text-white transition">
                   <Paperclip className="w-4 h-4" />
                 </button>
-                <button type="button" className="text-[#8696a0] hover:text-white transition">
-                  <Camera className="w-4 h-4" />
-                </button>
               </div>
 
-              {/* Round Green Send Button (Image 2) */}
+              {/* Round Green Send Button */}
               <button
                 type="button"
                 onClick={(e) => handleSendReply(e as any)}
@@ -762,9 +900,8 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               filteredChats.map((chat) => {
                 const isSelected = activeChat?.id === chat.id;
                 const avatarColor = getAvatarBg(chat.customerName);
-                const isOutbound = chat.messages && chat.messages.length > 0
-                  ? chat.messages[chat.messages.length - 1].direction === "OUTBOUND"
-                  : true;
+                const lastMsg = chat.messages?.[chat.messages.length - 1];
+                const isOutbound = lastMsg ? lastMsg.direction === "OUTBOUND" : true;
 
                 return (
                   <button
@@ -801,11 +938,14 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 font-mono mb-1">{chat.whatsappPhone}</p>
-                      <p className="text-xs text-slate-300 truncate flex items-center gap-1">
+                      <p className="text-xs text-slate-300 truncate flex items-center gap-0.5">
                         {isOutbound && (
-                          <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb] shrink-0" />
+                          <MessageTicks
+                            direction="OUTBOUND"
+                            status={lastMsg?.status || "READ"}
+                          />
                         )}
-                        <span className="truncate">{chat.lastMessageText || "No messages yet"}</span>
+                        <span className="truncate ml-1">{chat.lastMessageText || "No messages yet"}</span>
                       </p>
                     </div>
 
@@ -858,7 +998,20 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                     <h4 className="text-sm font-bold text-white truncate">
                       {activeChat.customerName}
                     </h4>
-                    <p className="text-xs text-slate-400 font-mono">{activeChat.whatsappPhone}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 font-mono">{activeChat.whatsappPhone}</span>
+                      <span className="text-slate-600">•</span>
+                      {isOnline ? (
+                        <span className="text-[11px] text-[#25D366] flex items-center gap-1 font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#25D366] animate-pulse" />
+                          online
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-400">
+                          last seen {activeChat.lastMessageAt || "recently"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -939,10 +1092,13 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                         {/* Content */}
                         <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
 
-                        {/* Double Checkmark for outbound messages */}
+                        {/* WhatsApp Delivery / Read Ticks for outbound messages */}
                         {!isCustomer && (
                           <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-emerald-200/80 select-none">
-                            <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
+                            <MessageTicks
+                              direction="OUTBOUND"
+                              status={msg.status || "READ"}
+                            />
                           </div>
                         )}
                       </div>
@@ -951,6 +1107,25 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 })}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Bottom Warning if AI Mode is active on Desktop */}
+              {activeChat.isAiActive && (
+                <div className="px-4 py-2 bg-indigo-950/70 border-t border-indigo-800/40 flex items-center justify-between text-xs text-indigo-200 shrink-0">
+                  <span className="flex items-center gap-2">
+                    <Bot className="w-4 h-4 text-indigo-400 shrink-0" />
+                    <span>
+                      <strong>AI Auto-Agent Loop Active:</strong> Typing a reply will automatically switch chat to Staff Mode.
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleHandover(activeChat)}
+                    className="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs"
+                  >
+                    Switch to Staff Mode
+                  </button>
+                </div>
+              )}
 
               {/* Bottom Reply Form & Simulation Controls placed cleanly underneath */}
               <div className="p-3 border-t border-slate-800 space-y-2 shrink-0 bg-slate-950/60">

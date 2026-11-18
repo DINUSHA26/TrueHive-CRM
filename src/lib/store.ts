@@ -118,6 +118,7 @@ export interface ChatThread {
     content: string;
     toolCalls?: string[];
     timestamp: string;
+    status?: "SENT" | "DELIVERED" | "READ";
   }[];
 }
 
