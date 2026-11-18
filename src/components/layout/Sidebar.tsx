@@ -112,8 +112,6 @@ export const NAV_SECTIONS: NavSection[] = [
         key: "ORDER_MANAGEMENT",
         label: "Order Management",
         icon: ClipboardList,
-        badgeKey: "orderManagement",
-        badgeVariant: "gray",
       },
       {
         key: "SUPPLIER_MANAGEMENT",
