@@ -673,7 +673,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
 
             {/* Conversation Messages Canvas (Middle scrollable area) */}
             <div
-              className="flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar bg-[#0b141a]"
+              className="whatsapp-chat-canvas flex-1 p-3 overflow-y-auto space-y-2.5 custom-scrollbar bg-[#0b141a]"
               style={{
                 backgroundImage:
                   "radial-gradient(#1f2c34 0.75px, transparent 0.75px), radial-gradient(#1f2c34 0.75px, #0b141a 0.75px)",
@@ -993,7 +993,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
 
               {/* Message History Canvas */}
               <div
-                className="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar bg-[#0b141a]"
+                className="whatsapp-chat-canvas flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar bg-[#0b141a]"
                 style={{
                   backgroundImage:
                     "radial-gradient(#1f2c34 0.75px, transparent 0.75px), radial-gradient(#1f2c34 0.75px, #0b141a 0.75px)",
