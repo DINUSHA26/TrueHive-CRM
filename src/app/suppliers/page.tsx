@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SupplierManagementView } from "@/components/views/SupplierManagementView";
 import type { SupplierRecord, IngredientItem } from "@/lib/store";
+import { NAV_ROUTES } from "@/components/layout/Sidebar";
 
 export default function SuppliersPage() {
+  const router = useRouter();
   const [suppliers, setSuppliers] = useState<SupplierRecord[]>([]);
   const [ingredients, setIngredients] = useState<IngredientItem[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -65,6 +68,7 @@ export default function SuppliersPage() {
         suppliers={suppliers}
         ingredients={ingredients}
         onRefresh={fetchData}
+        onNavigate={(key) => router.push(NAV_ROUTES[key] || "/")}
       />
     </DashboardLayout>
   );

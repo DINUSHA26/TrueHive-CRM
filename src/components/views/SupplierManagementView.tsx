@@ -11,6 +11,7 @@ import {
   Package,
   Phone,
   Clock,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -19,6 +20,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Modal } from "@/components/ui/Modal";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { SupplierRecord, IngredientItem } from "@/lib/store";
+import type { NavKey } from "@/components/layout/Sidebar";
 
 interface PurchaseOrderRecord {
   id: string;
@@ -37,12 +39,14 @@ interface SupplierManagementViewProps {
   suppliers: SupplierRecord[];
   ingredients: IngredientItem[];
   onRefresh: () => void;
+  onNavigate?: (key: NavKey) => void;
 }
 
 export function SupplierManagementView({
   suppliers,
   ingredients,
   onRefresh,
+  onNavigate,
 }: SupplierManagementViewProps) {
   const [activeTab, setActiveTab] = useState<"SUPPLIERS" | "PURCHASE_ORDERS">("SUPPLIERS");
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderRecord[]>([]);
@@ -174,6 +178,16 @@ export function SupplierManagementView({
         </div>
 
         <div className="flex items-center gap-2">
+          {onNavigate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onNavigate("SUPPLIER_LEDGER")}
+              leftIcon={<FileSpreadsheet className="w-4 h-4 text-emerald-400" />}
+            >
+              Supplier Ledger (AP)
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
