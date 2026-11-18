@@ -73,11 +73,16 @@ export interface OrderRecord {
   status: "PENDING" | "CONFIRMED" | "PROCESSING" | "READY_TO_SHIP" | "SHIPPED" | "DELIVERED" | "CANCELLED";
   paymentMethod: "CASH" | "CARD" | "BANK_TRANSFER" | "COD";
   paymentStatus: "UNPAID" | "PAID" | "VERIFYING_SLIP";
-  items: { productId: string; productName: string; sku: string; barcode: string; quantity: number; unitPrice: number; unitCogs: number; totalPrice: number }[];
+  items: { productId: string; productName: string; sku: string; barcode: string; quantity: number; unitPrice: number; unitCogs: number; totalPrice: number; discount?: number }[];
   subtotal: number;
   discountAmount: number;
+  taxAmount?: number;
+  deliveryFee?: number;
   totalAmount: number;
   totalCogs: number;
+  cashReceived?: number;
+  changeGiven?: number;
+  notes?: string;
   bomDeducted: boolean;
   whatsappNotificationsSent: string[];
   createdAt: string;

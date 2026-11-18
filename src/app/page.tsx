@@ -263,6 +263,7 @@ export default function TrueHiveWorkspace() {
         <PosPanelView
           products={products}
           ingredients={ingredients}
+          orders={orders}
           onRefresh={fetchAllData}
           onOpenA4Invoice={setSelectedA4Order}
         />
