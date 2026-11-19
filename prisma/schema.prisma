@@ -756,6 +756,7 @@ model Quotation {
   clientAddress       String?
 
   // Extra Reference / Meta
+  projectTitle        String?
   projectDesc         String?
   vehicleNo           String?         // Vehicle No or custom reference (e.g. CAY 6271)
   preparedBy          String?         @default("Fashion dora")

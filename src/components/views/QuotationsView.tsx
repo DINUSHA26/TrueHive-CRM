@@ -89,12 +89,12 @@ const INITIAL_QUOTES: QuotationRecord[] = [
     quoteNumber: "QT-1001",
     date: "2026-11-19",
     status: "DRAFT",
-    clientName: "manidu",
-    clientPhone: "0784837096",
+    clientName: "buddhika",
+    clientPhone: "0714510772",
     clientEmail: "manidudinusha@gmail.com",
-    clientAddress: "644/B kajuhena Road, Heiyanthuduwa.",
-    projectDesc: "Fashion dora apparel custom set order",
-    vehicleNo: "4444444",
+    clientAddress: "391/1A, Waiddy Mawatha, Pitipana North,",
+    projectTitle: "Custom Polo Shirt Order",
+    projectDesc: "Fashion dora apparel custom set order with customized branding",
     preparedBy: "Fashion dora",
     subtotal: 20000,
     discountPercent: 0,
@@ -163,8 +163,8 @@ export function QuotationsView({
     quoteNumber: "QT-1002",
     date: new Date().toISOString().split("T")[0],
     validUntil: "",
+    projectTitle: "",
     projectDesc: "",
-    vehicleNo: "",
     clientName: "",
     clientAddress: "",
     clientPhone: "",
@@ -253,7 +253,8 @@ export function QuotationsView({
         item.quoteNumber.toLowerCase().includes(q) ||
         item.clientName.toLowerCase().includes(q) ||
         (item.clientPhone && item.clientPhone.includes(q)) ||
-        (item.vehicleNo && item.vehicleNo.toLowerCase().includes(q))
+        (item.projectTitle && item.projectTitle.toLowerCase().includes(q)) ||
+        (item.projectDesc && item.projectDesc.toLowerCase().includes(q))
     );
   }, [quotations, searchQuery]);
 
@@ -290,8 +291,8 @@ export function QuotationsView({
       quoteNumber: getNextQuoteNumber(),
       date: new Date().toISOString().split("T")[0],
       validUntil: "",
+      projectTitle: "",
       projectDesc: "",
-      vehicleNo: "",
       clientName: "",
       clientAddress: "",
       clientPhone: "",
@@ -324,8 +325,8 @@ export function QuotationsView({
       quoteNumber: quote.quoteNumber,
       date: quote.date,
       validUntil: quote.validUntil || "",
+      projectTitle: quote.projectTitle || "",
       projectDesc: quote.projectDesc || "",
-      vehicleNo: quote.vehicleNo || "",
       clientName: quote.clientName,
       clientAddress: quote.clientAddress || "",
       clientPhone: quote.clientPhone || "",
@@ -413,8 +414,8 @@ export function QuotationsView({
       clientAddress: formData.clientAddress,
       clientPhone: formData.clientPhone,
       clientEmail: formData.clientEmail,
+      projectTitle: formData.projectTitle,
       projectDesc: formData.projectDesc,
-      vehicleNo: formData.vehicleNo,
       preparedBy: formData.preparedBy,
       notes: formData.notes,
       subtotal: calculatedTotals.subtotal,
@@ -846,24 +847,24 @@ export function QuotationsView({
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-medium mb-1">Project Description</label>
+                  <label className="block text-slate-400 font-medium mb-1">Project Title</label>
                   <input
                     type="text"
-                    value={formData.projectDesc}
-                    onChange={(e) => setFormData({ ...formData, projectDesc: e.target.value })}
-                    placeholder="Brief project overview..."
+                    value={formData.projectTitle}
+                    onChange={(e) => setFormData({ ...formData, projectTitle: e.target.value })}
+                    placeholder="Project Title (e.g. Custom Polo Shirt Order)"
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-slate-400 font-medium mb-1">Vehicle No / Custom Reference</label>
-                  <input
-                    type="text"
-                    value={formData.vehicleNo}
-                    onChange={(e) => setFormData({ ...formData, vehicleNo: e.target.value })}
-                    placeholder="Vehicle No (e.g. CAY 6271 or Ref)"
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50"
+                  <label className="block text-slate-400 font-medium mb-1">Project Description</label>
+                  <textarea
+                    rows={3}
+                    value={formData.projectDesc}
+                    onChange={(e) => setFormData({ ...formData, projectDesc: e.target.value })}
+                    placeholder="Brief project overview / Scope of work..."
+                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 resize-none"
                   />
                 </div>
               </div>
@@ -1153,92 +1154,136 @@ export function QuotationsView({
       )}
 
       {/* ========================================================================= */}
-      {/* 3. PRINT PREVIEW MODAL (Matching Screenshot 1) */}
+      {/* 3. PRINT PREVIEW MODAL (Matching Screenshot 1 & Enhanced for Scrolling) */}
       {/* ========================================================================= */}
       {previewQuote && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="relative w-full max-w-3xl bg-white text-slate-950 rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6 my-8 animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header Controls (Hidden during browser print) */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200 no-print">
-              <div className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-600" />
-                <h3 className="text-base font-bold text-slate-900">
-                  Quotation Print Preview ({previewQuote.quoteNumber})
-                </h3>
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center">
+          <div className="relative w-full max-w-3xl bg-white text-slate-950 rounded-2xl shadow-2xl my-2 sm:my-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+            {/* Sticky Modal Header Controls (Cannot scroll away, Always Visible) */}
+            <div className="sticky top-0 bg-white/95 backdrop-blur-md z-30 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-slate-200 shrink-0 no-print shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
+                    Quotation Print Preview ({previewQuote.quoteNumber})
+                  </h3>
+                  <p className="text-[10px] sm:text-[11px] text-slate-500">
+                    Review quotation below or print to paper / PDF.
+                  </p>
+                </div>
               </div>
+
               <div className="flex items-center gap-2">
                 <Button
                   variant="primary"
                   size="sm"
                   onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm px-3.5 py-2 rounded-xl"
                 >
                   <Printer className="w-3.5 h-3.5" />
-                  Print / Save as PDF
+                  <span>Print / Save as PDF</span>
                 </Button>
+
+                {/* Highly Visible Cut / Close Button */}
                 <button
                   onClick={() => setPreviewQuote(null)}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                  title="Close Preview (Cut)"
+                  aria-label="Close"
+                  className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 border border-slate-200 transition flex items-center gap-1.5 text-xs font-bold"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-4 h-4 text-slate-700 hover:text-rose-600" />
+                  <span>Close</span>
                 </button>
               </div>
             </div>
 
-            {/* Printable Document (Exact Replica of Screenshot 1) */}
-            <div
-              id="quotation-print-area"
-              ref={printDocumentRef}
-              className="space-y-6 text-slate-950 font-mono text-xs bg-white p-2"
-            >
-              {/* Top Company Header (Bordered Box) */}
-              <div className="border border-slate-900 rounded-xl p-4 flex items-center gap-6">
-                <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-slate-200 p-1 flex items-center justify-center">
-                  <img
-                    src={companyInfo.logoUrl}
-                    alt={companyInfo.name}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <h2 className="text-xl font-bold tracking-tight text-slate-950 font-serif">
-                    {companyInfo.name}
-                  </h2>
-                  <p className="text-[11px] text-slate-800">{companyInfo.address}</p>
-                  <p className="text-[11px] text-slate-800">{companyInfo.email}</p>
-                  <p className="text-[11px] text-slate-800">{companyInfo.phone}</p>
-                </div>
-              </div>
-
-              {/* Two Column Details: Quotation To & Ref / Date */}
-              <div className="grid grid-cols-2 gap-4 border border-slate-300 rounded-lg p-3 text-[11px]">
-                <div className="space-y-1 pr-3 border-r border-slate-200">
-                  <p className="font-bold uppercase tracking-wider text-slate-900">QUOTATION TO:</p>
-                  <p className="font-bold text-slate-950 text-xs">{previewQuote.clientName}</p>
-                  {previewQuote.clientAddress && <p className="text-slate-800">{previewQuote.clientAddress}</p>}
-                  {previewQuote.clientPhone && <p className="text-slate-800">{previewQuote.clientPhone}</p>}
-                  {previewQuote.clientEmail && <p className="text-slate-800">{previewQuote.clientEmail}</p>}
+            {/* Scrollable Document Area (Custom Scrollbar) */}
+            <div className="overflow-y-auto p-5 sm:p-8 space-y-6 flex-1 custom-scrollbar">
+              <div
+                id="quotation-print-area"
+                ref={printDocumentRef}
+                className="space-y-5 text-slate-950 font-mono text-xs bg-white"
+              >
+                {/* Top Company Header (Bordered Box) */}
+                <div className="border border-slate-900 rounded-xl p-4 flex items-center gap-6">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden shrink-0 border border-slate-200 p-1 flex items-center justify-center">
+                    <img
+                      src={companyInfo.logoUrl}
+                      alt={companyInfo.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <h2 className="text-xl font-bold tracking-tight text-slate-950 font-serif">
+                      {companyInfo.name}
+                    </h2>
+                    <p className="text-[11px] text-slate-800">{companyInfo.address}</p>
+                    <p className="text-[11px] text-slate-800">{companyInfo.email}</p>
+                    <p className="text-[11px] text-slate-800">{companyInfo.phone}</p>
+                  </div>
                 </div>
 
-                <div className="space-y-1 pl-1">
-                  <div className="flex justify-between">
-                    <span className="font-bold">INSURANCE / REF:</span>
-                    <span>-</span>
+                {/* Two Column Details: Quotation To & Quote Meta (No Vehicle/Model/Insurance) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-slate-300 rounded-lg p-3 text-[11px]">
+                  <div className="space-y-1 sm:pr-3 sm:border-r border-slate-200">
+                    <p className="font-bold uppercase tracking-wider text-slate-900">QUOTATION TO:</p>
+                    <p className="font-bold text-slate-950 text-xs">{previewQuote.clientName}</p>
+                    {previewQuote.clientAddress && <p className="text-slate-800">{previewQuote.clientAddress}</p>}
+                    {previewQuote.clientPhone && <p className="text-slate-800">{previewQuote.clientPhone}</p>}
+                    {previewQuote.clientEmail && <p className="text-slate-800">{previewQuote.clientEmail}</p>}
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold">MODEL:</span>
-                    <span>-</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold">VEHICLE NO:</span>
-                    <span className="font-bold">{previewQuote.vehicleNo || "-"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold">DATE:</span>
-                    <span className="font-bold">{previewQuote.date}</span>
+
+                  <div className="space-y-1.5 sm:pl-1">
+                    <div className="flex justify-between">
+                      <span className="font-bold text-slate-900">QUOTE NO:</span>
+                      <span className="font-bold text-slate-950 font-mono">{previewQuote.quoteNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="font-bold text-slate-900">DATE:</span>
+                      <span className="font-bold text-slate-950">{previewQuote.date}</span>
+                    </div>
+                    {previewQuote.validUntil && (
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-900">VALID UNTIL:</span>
+                        <span className="text-slate-800">{previewQuote.validUntil}</span>
+                      </div>
+                    )}
+                    {previewQuote.preparedBy && (
+                      <div className="flex justify-between">
+                        <span className="font-bold text-slate-900">PREPARED BY:</span>
+                        <span className="text-slate-800">{previewQuote.preparedBy}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
+
+                {/* Project Title & Project Description Section */}
+                {(previewQuote.projectTitle || previewQuote.projectDesc) && (
+                  <div className="border border-slate-300 rounded-lg p-3.5 bg-slate-50/70 space-y-1.5">
+                    {previewQuote.projectTitle && (
+                      <div className="flex items-baseline gap-2">
+                        <span className="font-bold text-slate-900 text-xs uppercase tracking-wide">
+                          PROJECT TITLE:
+                        </span>
+                        <span className="font-bold text-slate-950 text-xs">
+                          {previewQuote.projectTitle}
+                        </span>
+                      </div>
+                    )}
+                    {previewQuote.projectDesc && (
+                      <div className="space-y-0.5 pt-0.5">
+                        <span className="font-bold text-slate-900 text-[10px] uppercase tracking-wide">
+                          PROJECT DESCRIPTION:
+                        </span>
+                        <p className="text-[11px] text-slate-800 leading-relaxed whitespace-pre-line">
+                          {previewQuote.projectDesc}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               {/* Centered Underlined Title */}
               <div className="text-center py-2">
@@ -1305,31 +1350,35 @@ export function QuotationsView({
             </div>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ========================================================================= */}
       {/* 4. MAKE INVOICE MODAL (Matching Screenshot 5) */}
       {/* ========================================================================= */}
       {invoiceModalQuote && createdInvoiceData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="relative w-full max-w-md bg-white text-slate-950 rounded-3xl shadow-2xl p-6 sm:p-7 space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center">
+          <div className="relative w-full max-w-md bg-white text-slate-950 rounded-3xl shadow-2xl my-2 sm:my-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200 no-print">
+            <div className="sticky top-0 bg-white/95 backdrop-blur-md z-30 flex items-center justify-between px-6 py-3.5 border-b border-slate-200 shrink-0 no-print shadow-sm">
               <h3 className="text-base font-bold text-slate-900">Invoice Details</h3>
               <button
                 onClick={() => setInvoiceModalQuote(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                title="Close"
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-700 transition flex items-center gap-1 text-xs font-semibold"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
+                <span>Close</span>
               </button>
             </div>
 
             {/* Printable Thermal Receipt Card (Screenshot 5 Replica) */}
-            <div
-              id="pos-thermal-receipt"
-              ref={thermalReceiptRef}
-              className="space-y-3 font-mono text-xs text-slate-900 bg-white"
-            >
+            <div className="overflow-y-auto p-6 space-y-4 flex-1 custom-scrollbar">
+              <div
+                id="pos-thermal-receipt"
+                ref={thermalReceiptRef}
+                className="space-y-3 font-mono text-xs text-slate-900 bg-white"
+              >
               {/* Business Name */}
               <div className="text-center py-1">
                 <h2 className="text-2xl font-black tracking-tight text-slate-950">
@@ -1461,7 +1510,8 @@ export function QuotationsView({
             </div>
           </div>
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }

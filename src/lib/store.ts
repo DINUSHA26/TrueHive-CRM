@@ -172,6 +172,7 @@ export interface QuotationRecord {
   clientPhone?: string;
   clientEmail?: string;
   clientAddress?: string;
+  projectTitle?: string;
   projectDesc?: string;
   vehicleNo?: string;
   preparedBy?: string;
