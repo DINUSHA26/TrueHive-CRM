@@ -123,6 +123,14 @@ export default function TrueHiveWorkspace() {
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
         const meRes = await fetch("/api/auth/me", { headers });
+        if (meRes.status === 401) {
+          localStorage.removeItem("truehive_token");
+          localStorage.removeItem("truehive_user");
+          document.cookie = "truehive_token=; path=/; max-age=0";
+          document.cookie = "truehive_auth_token=; path=/; max-age=0";
+          window.location.href = "/login";
+          return;
+        }
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.authenticated && meData.user) {

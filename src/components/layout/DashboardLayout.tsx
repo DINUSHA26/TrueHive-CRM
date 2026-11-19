@@ -96,7 +96,17 @@ export function DashboardLayout({
         }
       } catch {}
       fetch("/api/auth/me")
-        .then((r) => r.json())
+        .then((r) => {
+          if (r.status === 401) {
+            localStorage.removeItem("truehive_token");
+            localStorage.removeItem("truehive_user");
+            document.cookie = "truehive_token=; path=/; max-age=0";
+            document.cookie = "truehive_auth_token=; path=/; max-age=0";
+            window.location.href = "/login";
+            return null;
+          }
+          return r.json();
+        })
         .then((d) => {
           if (d?.user?.name) {
             setLiveUser({ name: d.user.name, role: d.user.role });

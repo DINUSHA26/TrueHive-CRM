@@ -1,5 +1,3 @@
-import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 
 export type RoleType =
@@ -11,59 +9,66 @@ export type RoleType =
   | "ACCOUNTANT";
 
 export interface JWTPayload {
-  userId: string;
+  userId?: string;
+  id?: string;
   email: string;
   name: string;
   role: RoleType;
-  permissions: string[];
+  exp?: number;
+  iat?: number;
+  permissions?: string[];
 }
-
-const PRIMARY_SECRET = "e9a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6";
-const FALLBACK_SECRET = "truehive-super-secret-jwt-key-change-in-production-2026";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || PRIMARY_SECRET
-);
 
 export const AUTH_COOKIE_NAME = "truehive_token";
 
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 10);
-}
+/**
+ * Decodes and validates a JWT token without requiring backend secrets in the frontend.
+ * - Extracts and decodes the standard base64url JWT payload.
+ * - Checks expiration timestamp (`exp`).
+ * - Ensures required identity claims (`email`, `role`) exist.
+ *
+ * Cryptographic signature verification is strictly performed by the NestJS backend on all API requests.
+ */
+export function decodeAndValidateToken(token: string): JWTPayload | null {
+  if (!token || typeof token !== "string") return null;
 
-export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
-}
+  const parts = token.trim().split(".");
+  if (parts.length !== 3) return null;
 
-export async function signJwtToken(payload: JWTPayload): Promise<string> {
-  return new SignJWT({ ...payload })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(JWT_SECRET);
-}
+  try {
+    const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload =
+      typeof atob === "function"
+        ? atob(payloadBase64)
+        : Buffer.from(payloadBase64, "base64").toString("utf-8");
 
-export async function verifyJwtToken(token: string): Promise<JWTPayload | null> {
-  const secretCandidates = Array.from(
-    new Set(
-      [process.env.JWT_SECRET, PRIMARY_SECRET, FALLBACK_SECRET].filter(
-        (s): s is string => typeof s === "string" && s.length > 0
-      )
-    )
-  );
+    const payload = JSON.parse(jsonPayload) as JWTPayload;
 
-  for (const secretStr of secretCandidates) {
-    try {
-      const { payload } = await jwtVerify(
-        token,
-        new TextEncoder().encode(secretStr)
-      );
-      return payload as unknown as JWTPayload;
-    } catch {
-      // Try next secret candidate
+    // Check expiration if exp is present (exp is in seconds)
+    if (payload.exp && typeof payload.exp === "number") {
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      if (payload.exp < nowInSeconds) {
+        // Token has expired
+        return null;
+      }
     }
+
+    if (!payload.email || !payload.role) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
   }
-  return null;
+}
+
+/**
+ * Validates a JWT session token for Next.js route protection.
+ * Decoupled: Frontend verifies structure & active TTL; Backend verifies crypto signature.
+ */
+export async function verifyJwtToken(token: string): Promise<JWTPayload | null> {
+  return decodeAndValidateToken(token);
 }
 
 export async function getCurrentUser(): Promise<JWTPayload | null> {
@@ -71,7 +76,7 @@ export async function getCurrentUser(): Promise<JWTPayload | null> {
     const cookieStore = await cookies();
     const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
     if (!token) return null;
-    return verifyJwtToken(token);
+    return decodeAndValidateToken(token);
   } catch {
     return null;
   }
