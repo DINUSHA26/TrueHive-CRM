@@ -905,5 +905,124 @@ model InvoiceItem {
   @@index([invoiceId])
 }
 
+// ==========================================
+// HUMAN RESOURCES & PAYROLL (HRM)
+// ==========================================
+
+enum SalaryType {
+  MONTHLY
+  DAILY
+  HOURLY
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  TERMINATED
+  PROBATION
+}
+
+enum AttendanceStatus {
+  PRESENT
+  HALF_DAY
+  ABSENT
+  LEAVE
+}
+
+enum PayrollStatus {
+  OPEN
+  APPROVED
+  PAID
+}
+
+model Employee {
+  id              String            @id @default(cuid())
+  empId           String            @unique // e.g. "001", "002", "W04"
+  name            String
+  phone           String?
+  email           String?
+  department      String?           @default("Operations")
+  designation     String?           @default("Staff")
+  salaryType      SalaryType        @default(MONTHLY)
+  basicSalary     Float             @default(0) // Basic / Daily rate (LKR)
+  mealCost        Float             @default(0) // Default meal cost (LKR)
+  epfEtf          Float             @default(0) // Default EPF/ETF (LKR)
+  status          EmployeeStatus    @default(ACTIVE)
+  joinedDate      DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  attendances     AttendanceRecord[]
+  advances        SalaryAdvance[]
+  payrollItems    PayrollRecord[]
+
+  @@index([empId])
+  @@index([status])
+}
+
+model AttendanceRecord {
+  id              String            @id @default(cuid())
+  employeeId      String
+  date            String            // YYYY-MM-DD
+  status          AttendanceStatus  @default(PRESENT)
+  payableUnits    Float             @default(1.0) // 1.0 for Present, 0.5 for Half Day, 0.0 for Absent
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  employee        Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([employeeId])
+}
+
+model SalaryAdvance {
+  id              String            @id @default(cuid())
+  employeeId      String
+  amount          Float
+  advanceDate     DateTime          @default(now())
+  dateString      String            // YYYY-MM-DD
+  monthString     String            // YYYY-MM (e.g. "2026-11")
+  notes           String?
+  status          String            @default("PAID") // PAID, RECOVERED, VOID
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  employee        Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([monthString])
+}
+
+model PayrollRecord {
+  id              String            @id @default(cuid())
+  employeeId      String
+  month           Int               // 1-12
+  year            Int               // e.g. 2026
+  monthKey        String            // "2026-11"
+  salaryType      SalaryType        @default(MONTHLY)
+  rate            Float             @default(0)
+  workingDays     Float             @default(0)
+  baseSalary      Float             @default(0)
+  serviceCharges  Float             @default(0)
+  bonus           Float             @default(0)
+  mealCost        Float             @default(0)
+  epfEtf          Float             @default(0)
+  advances        Float             @default(0)
+  totalSalary     Float             @default(0)
+  status          PayrollStatus     @default(OPEN)
+  paidAt          DateTime?
+  paymentMethod   String?           @default("BANK_TRANSFER")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  employee        Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, monthKey])
+  @@index([monthKey])
+}
+
+
 
 

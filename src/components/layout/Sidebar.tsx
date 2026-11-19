@@ -24,6 +24,8 @@ import {
   FileSpreadsheet,
   FileText,
   Receipt,
+  CalendarCheck,
+  Banknote,
 } from "lucide-react";
 
 export type NavKey =
@@ -42,6 +44,9 @@ export type NavKey =
   | "INVOICES"
   | "CASH_FLOW"
   | "REPORTS"
+  | "EMPLOYEES"
+  | "ATTENDANCE"
+  | "PAYROLL"
   | "SETTINGS";
 
 export interface NavSection {
@@ -154,6 +159,26 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: "HUMAN RESOURCES & PAYROLL",
+    items: [
+      {
+        key: "EMPLOYEES",
+        label: "Employee Directory",
+        icon: Users,
+      },
+      {
+        key: "ATTENDANCE",
+        label: "Daily Attendance",
+        icon: CalendarCheck,
+      },
+      {
+        key: "PAYROLL",
+        label: "Salary & Advances",
+        icon: Banknote,
+      },
+    ],
+  },
+  {
     title: "ADMINISTRATION",
     items: [
       {
@@ -181,6 +206,9 @@ export const NAV_ROUTES: Record<NavKey, string> = {
   INVOICES: "/invoices",
   CASH_FLOW: "/cashflow",
   REPORTS: "/reports",
+  EMPLOYEES: "/employees",
+  ATTENDANCE: "/attendance",
+  PAYROLL: "/payroll",
   SETTINGS: "/settings",
 };
 

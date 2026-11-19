@@ -45,6 +45,9 @@ const NAV_TITLES: Record<NavKey, { category: string; title: string }> = {
   INVOICES: { category: "FINANCE & ANALYTICS", title: "Invoice Management & Billing Engine" },
   CASH_FLOW: { category: "FINANCE & ANALYTICS", title: "Cash Flow & Financial Ledger" },
   REPORTS: { category: "FINANCE & ANALYTICS", title: "Executive Reports & Google Docs" },
+  EMPLOYEES: { category: "HUMAN RESOURCES & PAYROLL", title: "Employee Directory & Master" },
+  ATTENDANCE: { category: "HUMAN RESOURCES & PAYROLL", title: "Daily Attendance & Shifts" },
+  PAYROLL: { category: "HUMAN RESOURCES & PAYROLL", title: "Monthly Salary Sheet & Advances" },
   SETTINGS: { category: "ADMINISTRATION", title: "System Settings & RBAC Roles" },
 };
 
