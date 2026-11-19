@@ -39,6 +39,7 @@ const NAV_TITLES: Record<NavKey, { category: string; title: string }> = {
   POS_PANEL: { category: "SALES & OPERATIONS", title: "Point of Sale (POS) Terminal" },
   PRODUCT_INVENTORY: { category: "SALES & OPERATIONS", title: "Product Inventory & BOM" },
   ORDER_MANAGEMENT: { category: "SALES & OPERATIONS", title: "Order Management & Tracking" },
+  QUOTATIONS: { category: "SALES & OPERATIONS", title: "Quotations & Invoice Estimations" },
   SUPPLIER_MANAGEMENT: { category: "SALES & OPERATIONS", title: "Suppliers, PO & GRN" },
   SUPPLIER_LEDGER: { category: "SALES & OPERATIONS", title: "Supplier Ledger & Purchases (AP)" },
   CASH_FLOW: { category: "FINANCE & ANALYTICS", title: "Cash Flow & Financial Ledger" },

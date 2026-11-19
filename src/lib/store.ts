@@ -148,6 +148,53 @@ export interface CashFlowRecord {
   date: string;
 }
 
+export interface QuotationItemRecord {
+  id?: string;
+  itemIndex: number;
+  productId?: string;
+  description: string;
+  unit: string; // Pcs, Set, kg, g, mg, ml, ltr, m, Box, Bottle, Custom
+  quantity: number;
+  unitPrice: number;
+  discount?: number;
+  taxPercent?: number;
+  amount: number;
+}
+
+export interface QuotationRecord {
+  id: string;
+  quoteNumber: string;
+  date: string;
+  validUntil?: string;
+  status: "DRAFT" | "SENT" | "ACCEPTED" | "INVOICED" | "DECLINED" | "EXPIRED";
+  customerId?: string;
+  clientName: string;
+  clientPhone?: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  projectDesc?: string;
+  vehicleNo?: string;
+  preparedBy?: string;
+  notes?: string;
+  subtotal: number;
+  discountPercent?: number;
+  discountAmount: number;
+  taxPercent?: number;
+  taxAmount: number;
+  finalAmount: number;
+  amountPaid: number;
+  balance: number;
+  amountInWords?: string;
+  convertedToInvoice?: boolean;
+  invoiceNumber?: string;
+  invoicedAt?: string;
+  paymentMethod?: string;
+  orderId?: string;
+  items: QuotationItemRecord[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
 const globalState = globalThis as unknown as {
   trueHiveStore?: {
     ingredients: IngredientItem[];

@@ -100,6 +100,7 @@ model Customer {
   orders         Order[]
   creditBills    CustomerCreditBill[]
   creditPayments CustomerCreditPayment[]
+  quotations     Quotation[]
 }
 
 model Lead {
@@ -238,6 +239,7 @@ model Product {
   bomItems       ProductIngredientBOM[]
   orderItems     OrderItem[]
   stockMovements StockMovement[]
+  quotationItems QuotationItem[]
 }
 
 model ProductVariant {
@@ -453,6 +455,7 @@ model Order {
   customer         Customer?            @relation(fields: [customerId], references: [id])
   items            OrderItem[]
   statusHistory    OrderStatusHistory[]
+  quotations       Quotation[]
 
   @@index([status])
   @@index([source])
@@ -724,4 +727,87 @@ model FundTransfer {
 
   @@index([transferDate])
 }
+
+// ==========================================
+// 10. QUOTATIONS & PRO-FORMA INVOICES
+// ==========================================
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  INVOICED
+  DECLINED
+  EXPIRED
+}
+
+model Quotation {
+  id                  String          @id @default(cuid())
+  quoteNumber         String          @unique // e.g. "QT-1001", "QT-1002"
+  date                DateTime        @default(now())
+  validUntil          DateTime?
+  status              QuotationStatus @default(DRAFT)
+
+  // Client Details
+  customerId          String?
+  clientName          String
+  clientPhone         String?
+  clientEmail         String?
+  clientAddress       String?
+
+  // Extra Reference / Meta
+  projectDesc         String?
+  vehicleNo           String?         // Vehicle No or custom reference (e.g. CAY 6271)
+  preparedBy          String?         @default("Fashion dora")
+  notes               String?
+
+  // Financial Breakdown
+  subtotal            Float           @default(0)
+  discountPercent     Float           @default(0)
+  discountAmount      Float           @default(0)
+  taxPercent          Float           @default(0)
+  taxAmount           Float           @default(0)
+  finalAmount         Float           @default(0)
+  amountPaid          Float           @default(0)
+  balance             Float           @default(0)
+  amountInWords       String?
+
+  // Converted Invoice Information
+  convertedToInvoice Boolean         @default(false)
+  invoiceNumber       String?         // e.g. "INV-858000"
+  invoicedAt          DateTime?
+  paymentMethod       String?         @default("Cash") // Cash, Card, Bank Transfer, Credit
+  orderId             String?
+
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  customer            Customer?       @relation(fields: [customerId], references: [id])
+  order               Order?          @relation(fields: [orderId], references: [id])
+  items               QuotationItem[]
+
+  @@index([quoteNumber])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model QuotationItem {
+  id          String    @id @default(cuid())
+  quotationId String
+  productId   String?
+  itemIndex   Int       @default(1)
+  description String    // Item or service name
+  unit        String    @default("Pcs") // Pcs, Set, kg, g, mg, ml, ltr, m, Box, Bottle, Pack, Custom
+  quantity    Float     @default(1)
+  unitPrice   Float     @default(0)
+  discount    Float     @default(0)
+  taxPercent  Float     @default(0) // GST/Tax %
+  amount      Float     @default(0)
+
+  quotation   Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  product     Product?  @relation(fields: [productId], references: [id])
+
+  @@index([quotationId])
+}
+
 
