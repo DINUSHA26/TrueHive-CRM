@@ -870,16 +870,6 @@ export function EmployeeManagementView({
           </Button>
 
           <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleOpenLogAdvance()}
-            className="border-amber-500/30 hover:bg-amber-500/10 text-amber-400"
-          >
-            <DollarSign className="w-4 h-4 mr-1.5" />
-            Log Salary Advance
-          </Button>
-
-          <Button
             size="sm"
             onClick={handleOpenAddEmployee}
             className="bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg shadow-blue-600/25"
