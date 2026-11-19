@@ -20,7 +20,9 @@ export default function OrdersPage() {
     try {
       const res = await fetch("/api/orders");
       const data = await res.json();
-      if (data.orders) setOrders(data.orders);
+      if (data.orders && Array.isArray(data.orders)) setOrders(data.orders);
+      else if (Array.isArray(data)) setOrders(data);
+      else if (data.data && Array.isArray(data.data)) setOrders(data.data);
     } catch (err) {
       console.error("Failed to load orders:", err);
     } finally {

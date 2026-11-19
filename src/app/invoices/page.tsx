@@ -23,23 +23,26 @@ export default function InvoicesPage() {
     setIsRefreshing(true);
     try {
       const [oRes, pRes, cRes] = await Promise.allSettled([
-        fetch("/api/commerce/orders"),
-        fetch("/api/catalog/products"),
-        fetch("/api/crm/customers"),
+        fetch("/api/orders"),
+        fetch("/api/inventory"),
+        fetch("/api/crm?view=customers"),
       ]);
 
       if (oRes.status === "fulfilled" && oRes.value.ok) {
         const oData = await oRes.value.json();
-        if (oData.orders) setOrders(oData.orders);
+        if (oData.orders && Array.isArray(oData.orders)) setOrders(oData.orders);
         else if (Array.isArray(oData)) setOrders(oData);
+        else if (oData.data && Array.isArray(oData.data)) setOrders(oData.data);
       }
       if (pRes.status === "fulfilled" && pRes.value.ok) {
         const pData = await pRes.value.json();
-        if (pData.products) setProducts(pData.products);
+        if (pData.products && Array.isArray(pData.products)) setProducts(pData.products);
+        else if (Array.isArray(pData)) setProducts(pData);
       }
       if (cRes.status === "fulfilled" && cRes.value.ok) {
         const cData = await cRes.value.json();
-        if (cData.customers) setCustomers(cData.customers);
+        if (cData.customers && Array.isArray(cData.customers)) setCustomers(cData.customers);
+        else if (Array.isArray(cData)) setCustomers(cData);
       }
     } catch (err) {
       console.warn("Failed to load initial invoice data:", err);
@@ -70,13 +73,6 @@ export default function InvoicesPage() {
   return (
     <DashboardLayout
       activeNav="INVOICES"
-      onSelectNav={(nav) => {
-        if (nav === "INVOICES") return;
-        const target = NAV_ROUTES[nav];
-        if (target) {
-          window.location.href = target;
-        }
-      }}
       onRefresh={fetchData}
       isRefreshing={isRefreshing}
       currentUser={currentUser}

@@ -145,7 +145,25 @@ export function OrderManagementView({
   const totalOrdersCount = orders.length;
   const totalOrderValue = orders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
   const totalReceived = orders.reduce((acc, o) => {
-    if (o.paymentStatus === "PAID" || o.settlementStatus === "SETTLED") {
+    const isPos =
+      o.source === "POS_TERMINAL" ||
+      o.orderNumber?.startsWith("INV-") ||
+      o.deliveryCity?.toLowerCase().includes("pos");
+
+    const isImmediate =
+      o.paymentMethod === "CASH" ||
+      o.paymentMethod === "CARD" ||
+      o.paymentMethod === "QR_PAY" ||
+      o.paymentMethod === "QR" ||
+      o.paymentMethod === "ONLINE_BANK" ||
+      o.paymentMethod === "BANK_TRANSFER";
+
+    const isPaid =
+      o.paymentStatus === "PAID" ||
+      o.settlementStatus === "SETTLED" ||
+      (isPos && isImmediate && o.paymentMethod !== "SPLIT" && o.paymentMethod !== "CREDIT" && o.paymentMethod !== "COD");
+
+    if (isPaid) {
       return acc + (o.totalAmount || 0);
     }
     return acc + (o.cashReceived || 0);
@@ -181,9 +199,9 @@ export function OrderManagementView({
     // Channel filter
     if (channelTab === "WHATSAPP_AI" && o.source !== "WHATSAPP_AI") return false;
     if (channelTab === "COD" && o.paymentMethod !== "COD") return false;
-    if (channelTab === "BANK_TRANSFER" && o.paymentMethod !== "BANK_TRANSFER") return false;
-    if (channelTab === "CREDIT" && o.paymentMethod !== "SPLIT") return false;
-    if (channelTab === "POS" && o.source !== "POS_TERMINAL") return false;
+    if (channelTab === "BANK_TRANSFER" && o.paymentMethod !== "BANK_TRANSFER" && o.paymentMethod !== "ONLINE_BANK" && o.paymentMethod !== "QR_PAY") return false;
+    if (channelTab === "CREDIT" && o.paymentMethod !== "SPLIT" && o.paymentMethod !== "CREDIT") return false;
+    if (channelTab === "POS" && o.source !== "POS_TERMINAL" && !o.orderNumber?.startsWith("INV-") && !o.deliveryCity?.toLowerCase().includes("pos")) return false;
 
     // Status filter
     if (statusFilter !== "ALL" && o.status !== statusFilter) return false;
@@ -228,7 +246,27 @@ export function OrderManagementView({
 
   // Handle Toggle Payment Status (e.g. Mark Cash/Card as PAID)
   const handleTogglePaymentStatus = async (order: OrderRecord) => {
-    const newPaymentStatus = order.paymentStatus === "PAID" ? "UNPAID" : "PAID";
+    const isPos =
+      order.source === "POS_TERMINAL" ||
+      order.orderNumber?.startsWith("INV-") ||
+      order.deliveryCity?.toLowerCase().includes("pos");
+
+    const isImmediate =
+      order.paymentMethod === "CASH" ||
+      order.paymentMethod === "CARD" ||
+      order.paymentMethod === "QR_PAY" ||
+      order.paymentMethod === "QR" ||
+      order.paymentMethod === "ONLINE_BANK" ||
+      order.paymentMethod === "BANK_TRANSFER";
+
+    const currentEffective =
+      order.paymentStatus === "PAID"
+        ? "PAID"
+        : isPos && isImmediate && order.paymentMethod !== "SPLIT" && order.paymentMethod !== "CREDIT" && order.paymentMethod !== "COD"
+        ? "PAID"
+        : order.paymentStatus;
+
+    const newPaymentStatus = currentEffective === "PAID" ? "UNPAID" : "PAID";
     try {
       const res = await fetch(`/api/orders/${order.id}/payment-status`, {
         method: "PATCH",
@@ -613,9 +651,9 @@ export function OrderManagementView({
           { key: "ALL", label: "All Orders", icon: Layers },
           { key: "WHATSAPP_AI", label: "WhatsApp AI Orders", icon: Bot, badge: orders.filter((o) => o.source === "WHATSAPP_AI").length },
           { key: "COD", label: "Cash On Delivery (COD)", icon: Truck, badge: codOrders.length },
-          { key: "BANK_TRANSFER", label: "Bank Transfer", icon: DollarSign },
-          { key: "CREDIT", label: "Customer Credit (AR)", icon: CreditCard },
-          { key: "POS", label: "POS Counter", icon: Package },
+          { key: "BANK_TRANSFER", label: "Bank Transfer", icon: DollarSign, badge: orders.filter((o) => o.paymentMethod === "BANK_TRANSFER" || o.paymentMethod === "ONLINE_BANK" || o.paymentMethod === "QR_PAY").length },
+          { key: "CREDIT", label: "Customer Credit (AR)", icon: CreditCard, badge: orders.filter((o) => o.paymentMethod === "SPLIT" || o.paymentMethod === "CREDIT").length },
+          { key: "POS", label: "POS Counter", icon: Package, badge: orders.filter((o) => o.source === "POS_TERMINAL" || o.orderNumber?.startsWith("INV-") || o.deliveryCity?.toLowerCase().includes("pos")).length },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = channelTab === tab.key;
@@ -705,14 +743,42 @@ export function OrderManagementView({
                 <TableBody>
                   {filtered.map((order) => {
                     const isWhatsApp = order.source === "WHATSAPP_AI";
-                    const isPos = order.source === "POS_TERMINAL";
+                    const isPos =
+                      order.source === "POS_TERMINAL" ||
+                      order.orderNumber?.startsWith("INV-") ||
+                      order.deliveryCity?.toLowerCase().includes("pos");
                     const isCod = order.paymentMethod === "COD";
-                    const isBankTransfer = order.paymentMethod === "BANK_TRANSFER";
+                    const isBankTransfer =
+                      order.paymentMethod === "BANK_TRANSFER" ||
+                      order.paymentMethod === "ONLINE_BANK";
                     const isStorePickup =
                       order.courierPartner === "STORE_PICKUP" ||
                       order.deliveryCity === "In-Store" ||
+                      order.deliveryCity?.toLowerCase().includes("pos") ||
                       order.shippingAddress?.toLowerCase().includes("store pickup") ||
-                      order.shippingAddress?.toLowerCase().includes("in-store");
+                      order.shippingAddress?.toLowerCase().includes("in-store") ||
+                      order.shippingAddress?.toLowerCase().includes("pos") ||
+                      (isPos && !order.trackingNumber && (!order.courierPartner || order.courierPartner === "STORE_PICKUP"));
+
+                    const isImmediatePaidMethod =
+                      order.paymentMethod === "CASH" ||
+                      order.paymentMethod === "CARD" ||
+                      order.paymentMethod === "QR_PAY" ||
+                      order.paymentMethod === "QR" ||
+                      order.paymentMethod === "ONLINE_BANK" ||
+                      order.paymentMethod === "BANK_TRANSFER";
+
+                    const effectivePaymentStatus =
+                      order.paymentStatus === "PAID"
+                        ? "PAID"
+                        : isPos && isImmediatePaidMethod && order.paymentMethod !== "SPLIT" && order.paymentMethod !== "CREDIT" && order.paymentMethod !== "COD"
+                        ? "PAID"
+                        : order.paymentStatus;
+
+                    const effectiveFulfillmentStatus =
+                      isStorePickup && (order.status === "PENDING" || order.status === "CONFIRMED" || !order.status)
+                        ? "DELIVERED"
+                        : order.status;
 
                     return (
                       <TableRow key={order.id}>
@@ -795,14 +861,14 @@ export function OrderManagementView({
                                 onClick={() => handleTogglePaymentStatus(order)}
                                 title="Click to toggle Paid/Unpaid"
                                 className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer transition ${
-                                  order.paymentStatus === "PAID"
+                                  effectivePaymentStatus === "PAID"
                                     ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                                    : order.paymentStatus === "VERIFYING_SLIP"
+                                    : effectivePaymentStatus === "VERIFYING_SLIP"
                                     ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
                                     : "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
                                 }`}
                               >
-                                {order.paymentStatus}
+                                {effectivePaymentStatus}
                               </button>
                             </div>
                           </div>
@@ -848,7 +914,7 @@ export function OrderManagementView({
                           <div className="flex items-center gap-1.5">
                             <select
                               disabled={updatingId === order.id}
-                              value={order.status}
+                              value={effectiveFulfillmentStatus}
                               onChange={(e) => handleStatusChange(order.id, e.target.value)}
                               className="px-2 py-1 bg-slate-950 border border-slate-800 rounded-lg text-xs font-semibold text-white focus:outline-none focus:border-blue-500"
                             >

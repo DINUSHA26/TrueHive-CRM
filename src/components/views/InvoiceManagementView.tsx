@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   Receipt,
   Search,
@@ -53,7 +53,8 @@ interface Props {
 }
 
 // Initial sample invoices matching LKpos ERP Invoice Management Report (Page 2, Figure 1)
-const INITIAL_LKPOS_INVOICES: InvoiceRecord[] = [
+const INITIAL_LKPOS_INVOICES: InvoiceRecord[] = [];
+const OLD_MOCK_INVOICES: InvoiceRecord[] = [
   {
     id: "inv-858000",
     invoiceNumber: "INV-858000",
@@ -273,6 +274,109 @@ const INITIAL_LKPOS_INVOICES: InvoiceRecord[] = [
   },
 ];
 
+const isMockInvoice = (inv: InvoiceRecord): boolean =>
+  inv.id === "inv-858000" ||
+  inv.id === "inv-439000" ||
+  inv.id === "inv-612000" ||
+  inv.id === "inv-994000" ||
+  inv.id === "inv-700000" ||
+  inv.id === "inv-342000" ||
+  inv.invoiceNumber === "INV-858000" ||
+  inv.invoiceNumber === "INV-439000" ||
+  inv.invoiceNumber === "INV-612000" ||
+  inv.invoiceNumber === "INV-994000" ||
+  inv.invoiceNumber === "INV-700000" ||
+  inv.invoiceNumber === "INV-342000" ||
+  inv.customerName === "D.B.K (Pvt) Ltd" ||
+  inv.customerName === "Buddhika Auto Works" ||
+  (typeof inv.date === "string" && (inv.date.startsWith("2024-03") || inv.date.startsWith("2024-04")));
+
+const convertOrderToInvoice = (ord: OrderRecord): InvoiceRecord => {
+  const isPos =
+    ord.source === "POS_TERMINAL" ||
+    (ord as any).channel === "POS" ||
+    Boolean(ord.orderNumber?.startsWith("INV-")) ||
+    Boolean(ord.deliveryCity?.toLowerCase().includes("pos"));
+
+  const isImmediate =
+    ord.paymentMethod === "CASH" ||
+    ord.paymentMethod === "CARD" ||
+    ord.paymentMethod === "QR_PAY" ||
+    ord.paymentMethod === "QR" ||
+    ord.paymentMethod === "ONLINE_BANK" ||
+    ord.paymentMethod === "BANK_TRANSFER";
+
+  const effectiveStatus: InvoiceStatusType =
+    ord.paymentStatus === "PAID"
+      ? "PAID"
+      : isPos && isImmediate && ord.paymentMethod !== "SPLIT" && ord.paymentMethod !== "CREDIT" && ord.paymentMethod !== "COD"
+      ? "PAID"
+      : ord.paymentStatus === "PARTIAL"
+      ? "PARTIAL"
+      : "UNPAID";
+
+  const issued = ord.createdAt ? new Date(ord.createdAt) : new Date();
+  const invDate = issued.toISOString().split("T")[0];
+  const invTime = issued.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  const rawNum = ord.orderNumber || ord.id || "";
+  const invNum = rawNum.startsWith("INV-")
+    ? rawNum
+    : `INV-${rawNum.replace(/[^0-9]/g, "").padStart(6, "0").slice(-6)}`;
+
+  const total = Number(ord.totalAmount) || 0;
+  const paid = effectiveStatus === "PAID" ? total : Number(ord.cashReceived) || 0;
+  const balance = effectiveStatus === "PAID" ? 0 : Math.max(0, total - paid);
+  const creditBilled =
+    ord.paymentMethod === "CREDIT" || ord.paymentMethod === "SPLIT"
+      ? total
+      : effectiveStatus === "UNPAID"
+      ? total
+      : 0;
+
+  return {
+    id: `inv-ord-${ord.id}`,
+    invoiceNumber: invNum,
+    type: isPos ? "POS_RECEIPT" : "STANDARD",
+    status: effectiveStatus,
+    issuedAt: ord.createdAt || new Date().toISOString(),
+    date: invDate,
+    time: invTime,
+    orderId: ord.id,
+    customerId: (ord as unknown as { customerId?: string }).customerId,
+    customerName: ord.customerName || "Walk-in Customer",
+    customerPhone: ord.customerPhone || "POS-Counter",
+    billingAddress: ord.shippingAddress || (isPos ? "In-Store POS Counter" : undefined),
+    currency: "LKR",
+    subtotal: ord.subtotal || total,
+    discountAmount: ord.discountAmount || 0,
+    taxAmount: ord.taxAmount || 0,
+    deliveryFee: ord.deliveryFee || 0,
+    totalAmount: total,
+    paidAmount: paid,
+    creditBilled,
+    balance,
+    returnValue: 0,
+    paymentMethod: ord.paymentMethod,
+    paymentStatus: effectiveStatus,
+    items: (ord.items || []).map((it) => ({
+      productId: it.productId,
+      sku: it.sku,
+      description: it.productName,
+      quantity: it.quantity,
+      unit: "Pcs",
+      unitPrice: it.unitPrice,
+      discount: it.discount || 0,
+      totalPrice: it.totalPrice,
+    })),
+    createdAt: ord.createdAt || new Date().toISOString(),
+  };
+};
+
 export function InvoiceManagementView({
   orders = [],
   products = [],
@@ -308,45 +412,6 @@ export function InvoiceManagementView({
   // Form State for Void Modal
   const [voidReasonText, setVoidReasonText] = useState<string>("");
 
-  // Load Invoices from API or LocalStorage
-  const loadInvoices = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/invoices");
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setInvoices(data);
-          localStorage.setItem("truehive_invoices_cache", JSON.stringify(data));
-          return;
-        }
-      }
-    } catch {
-      // Backend not yet reachable, fallback
-    }
-
-    // Fallback: Check cached invoices or initial sample
-    try {
-      const saved = localStorage.getItem("truehive_invoices_cache");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setInvoices(parsed);
-          setIsLoading(false);
-          return;
-        }
-      }
-    } catch {}
-
-    setInvoices(INITIAL_LKPOS_INVOICES);
-    localStorage.setItem("truehive_invoices_cache", JSON.stringify(INITIAL_LKPOS_INVOICES));
-    setIsLoading(false);
-  };
-
-  useEffect(() => {
-    loadInvoices();
-  }, []);
-
   // Save changes locally and to backend if possible
   const saveInvoicesState = (newInvoices: InvoiceRecord[]) => {
     setInvoices(newInvoices);
@@ -355,74 +420,110 @@ export function InvoiceManagementView({
     } catch {}
   };
 
-  // Sync Orders into Invoices
+  // Helper to merge live orders into the invoices ledger seamlessly
+  const mergeWithOrders = useCallback(
+    (baseInvoices: InvoiceRecord[], orderList: OrderRecord[]): InvoiceRecord[] => {
+      const cleanBase = baseInvoices.filter((inv) => !isMockInvoice(inv));
+      const existingKeys = new Set<string>();
+
+      cleanBase.forEach((inv) => {
+        if (inv.orderId) existingKeys.add(`ord-${inv.orderId}`);
+        if (inv.invoiceNumber) existingKeys.add(inv.invoiceNumber.toLowerCase());
+      });
+
+      const synthesized: InvoiceRecord[] = [];
+      orderList.forEach((ord) => {
+        const rawNum = ord.orderNumber || ord.id || "";
+        const invNum = rawNum.startsWith("INV-")
+          ? rawNum
+          : `INV-${rawNum.replace(/[^0-9]/g, "").padStart(6, "0").slice(-6)}`;
+
+        const keyById = `ord-${ord.id}`;
+        const keyByNum = invNum.toLowerCase();
+
+        if (!existingKeys.has(keyById) && !existingKeys.has(keyByNum)) {
+          synthesized.push(convertOrderToInvoice(ord));
+          existingKeys.add(keyById);
+          existingKeys.add(keyByNum);
+        }
+      });
+
+      const combined = [...cleanBase, ...synthesized].sort((a, b) => {
+        const timeA = new Date(a.issuedAt || a.createdAt || 0).getTime();
+        const timeB = new Date(b.issuedAt || b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+
+      return combined;
+    },
+    []
+  );
+
+  // Load Invoices from API or LocalStorage
+  const loadInvoices = useCallback(async () => {
+    setIsLoading(true);
+    let loadedFromApi: InvoiceRecord[] = [];
+
+    try {
+      const res = await fetch("/api/invoices");
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : (data.data || data.invoices || []);
+        if (Array.isArray(list)) {
+          loadedFromApi = list.filter((inv: InvoiceRecord) => !isMockInvoice(inv));
+        }
+      }
+    } catch {
+      // Backend not yet reachable, fallback
+    }
+
+    if (loadedFromApi.length === 0) {
+      try {
+        const saved = localStorage.getItem("truehive_invoices_cache");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            loadedFromApi = parsed.filter((inv: InvoiceRecord) => !isMockInvoice(inv));
+          }
+        }
+      } catch {}
+    }
+
+    const merged = mergeWithOrders(loadedFromApi, orders);
+    setInvoices(merged);
+    try {
+      localStorage.setItem("truehive_invoices_cache", JSON.stringify(merged));
+    } catch {}
+    setIsLoading(false);
+  }, [orders, mergeWithOrders]);
+
+  useEffect(() => {
+    loadInvoices();
+  }, [loadInvoices]);
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      setInvoices((prev) => {
+        const merged = mergeWithOrders(prev, orders);
+        try {
+          localStorage.setItem("truehive_invoices_cache", JSON.stringify(merged));
+        } catch {}
+        return merged;
+      });
+    }
+  }, [orders, mergeWithOrders]);
+
+  // Sync Orders into Invoices (triggers backend sync and re-merges)
   const handleSyncOrders = async () => {
     setIsLoading(true);
     try {
       await fetch("/api/invoices/sync-orders", { method: "POST" });
     } catch {}
 
-    // Also sync from props.orders
-    const existingInvNumbers = new Set(invoices.map((inv) => inv.invoiceNumber));
-    const syncedFromOrders: InvoiceRecord[] = [];
-
-    orders.forEach((ord) => {
-      const invNum = `INV-${ord.orderNumber.replace(/[^0-9]/g, "").padStart(6, "0").slice(-6)}`;
-      if (!existingInvNumbers.has(invNum)) {
-        const issued = new Date(ord.createdAt);
-        const invDate = issued.toISOString().split("T")[0];
-        const invTime = issued.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        });
-
-        const newInv: InvoiceRecord = {
-          id: `inv-${ord.id}`,
-          invoiceNumber: invNum,
-          type: "POS_RECEIPT",
-          status: ord.paymentStatus === "PAID" ? "PAID" : ord.paymentStatus === "PARTIAL" ? "PARTIAL" : "UNPAID",
-          issuedAt: ord.createdAt,
-          date: invDate,
-          time: invTime,
-          orderId: ord.id,
-          customerId: (ord as unknown as { customerId?: string }).customerId || undefined,
-          customerName: ord.customerName,
-          customerPhone: ord.customerPhone,
-          billingAddress: ord.shippingAddress,
-          currency: "LKR",
-          subtotal: ord.subtotal || ord.totalAmount,
-          discountAmount: ord.discountAmount || 0,
-          taxAmount: ord.taxAmount || 0,
-          deliveryFee: ord.deliveryFee || 0,
-          totalAmount: ord.totalAmount,
-          paidAmount: ord.paymentStatus === "PAID" ? ord.totalAmount : ord.cashReceived || 0,
-          creditBilled: ord.paymentStatus === "UNPAID" ? ord.totalAmount : 0,
-          balance: ord.paymentStatus === "PAID" ? 0 : Math.max(0, ord.totalAmount - (ord.cashReceived || 0)),
-          returnValue: 0,
-          paymentMethod: ord.paymentMethod,
-          paymentStatus: ord.paymentStatus,
-          items: ord.items.map((it) => ({
-            productId: it.productId,
-            sku: it.sku,
-            description: it.productName,
-            quantity: it.quantity,
-            unit: "Pcs",
-            unitPrice: it.unitPrice,
-            discount: it.discount,
-            totalPrice: it.totalPrice,
-          })),
-          createdAt: ord.createdAt,
-        };
-        syncedFromOrders.push(newInv);
-        existingInvNumbers.add(invNum);
-      }
-    });
-
-    if (syncedFromOrders.length > 0) {
-      const merged = [...syncedFromOrders, ...invoices];
-      saveInvoicesState(merged);
+    if (onRefresh) {
+      onRefresh();
     }
+    await loadInvoices();
     setIsLoading(false);
   };
 
