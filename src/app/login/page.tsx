@@ -17,6 +17,7 @@ import {
   Moon,
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,22 +39,44 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
+      let res: Response;
+      try {
+        res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+      } catch {
+        res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+      }
+
+      if (res.status === 404) {
+        res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+      }
+
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "පිවිසීම අසාර්ථකයි. කරුණාකර නැවත උත්සාහ කරන්න.");
+        setError(data.error || data.message || "පිවිසීම අසාර්ථකයි. කරුණාකර නැවත උත්සාහ කරන්න.");
         setLoading(false);
         return;
       }
 
       if (data.token) {
         localStorage.setItem("truehive_token", data.token);
-        document.cookie = `truehive_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
-        document.cookie = `truehive_auth_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+        const secureFlag =
+          typeof window !== "undefined" && window.location.protocol === "https:"
+            ? "; Secure"
+            : "";
+        document.cookie = `truehive_token=${data.token}; path=/; max-age=604800; SameSite=Lax${secureFlag}`;
+        document.cookie = `truehive_auth_token=${data.token}; path=/; max-age=604800; SameSite=Lax${secureFlag}`;
       }
 
       if (rememberMe) {

@@ -18,8 +18,11 @@ export interface JWTPayload {
   permissions: string[];
 }
 
+const PRIMARY_SECRET = "e9a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6";
+const FALLBACK_SECRET = "truehive-super-secret-jwt-key-change-in-production-2026";
+
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "truehive-super-secret-jwt-key-change-in-production-2026"
+  process.env.JWT_SECRET || PRIMARY_SECRET
 );
 
 export const AUTH_COOKIE_NAME = "truehive_token";
@@ -41,12 +44,26 @@ export async function signJwtToken(payload: JWTPayload): Promise<string> {
 }
 
 export async function verifyJwtToken(token: string): Promise<JWTPayload | null> {
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload as unknown as JWTPayload;
-  } catch {
-    return null;
+  const secretCandidates = Array.from(
+    new Set(
+      [process.env.JWT_SECRET, PRIMARY_SECRET, FALLBACK_SECRET].filter(
+        (s): s is string => typeof s === "string" && s.length > 0
+      )
+    )
+  );
+
+  for (const secretStr of secretCandidates) {
+    try {
+      const { payload } = await jwtVerify(
+        token,
+        new TextEncoder().encode(secretStr)
+      );
+      return payload as unknown as JWTPayload;
+    } catch {
+      // Try next secret candidate
+    }
   }
+  return null;
 }
 
 export async function getCurrentUser(): Promise<JWTPayload | null> {

@@ -1,5 +1,6 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://truehive-erp.1ag4bevrwgjd8.ap-southeast-2.cs.amazonlightsail.com/api/v1";
 
 export async function apiFetch<T = any>(
   endpoint: string,
