@@ -1,4 +1,4 @@
-// Unified Data Layer: Uses Prisma when DATABASE_URL is connected, with rich instant state for immediate operation & testing
+// Unified Data Layer: Enterprise ERP Data Models and TypeScript Interface Contracts
 
 export interface ProductItem {
   id: string;
