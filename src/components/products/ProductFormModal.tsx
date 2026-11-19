@@ -147,19 +147,27 @@ export function ProductFormModal({
           body: formData,
         });
 
-        const data = await res.json();
+        let data: any = {};
+        try {
+          data = await res.json();
+        } catch {
+          throw new Error(`Upload server returned status ${res.status}`);
+        }
+
         if (data.success && data.data?.url) {
           newUploaded.push({
             url: data.data.url,
             position: images.length + newUploaded.length,
           });
+        } else {
+          throw new Error(data.error || "Upload failed");
         }
       }
 
       setImages((prev) => [...prev, ...newUploaded]);
     } catch (err: any) {
       console.error("Cloudinary upload failed:", err);
-      setErrorMsg("Failed to upload image to Cloudinary.");
+      setErrorMsg(err.message || "Failed to upload image to Cloudinary.");
     } finally {
       setUploadingImage(false);
       e.target.value = "";
@@ -231,7 +239,13 @@ export function ProductFormModal({
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to save product.");
       }

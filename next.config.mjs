@@ -13,13 +13,13 @@ const nextConfig = {
     ],
   },
   async rewrites() {
-    const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      "https://truehive-erp.1ag4bevrwgjd8.ap-southeast-2.cs.amazonlightsail.com/api/v1";
+    if (!process.env.BACKEND_PROXY_URL) {
+      return [];
+    }
     return [
       {
         source: "/api/:path*",
-        destination: `${backendUrl}/:path*`,
+        destination: `${process.env.BACKEND_PROXY_URL}/:path*`,
       },
     ];
   },

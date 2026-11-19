@@ -142,7 +142,13 @@ export function CategoryManagementView() {
         body: formData,
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Upload server responded with status ${res.status}`);
+      }
+
       if (data.success && data.data?.url) {
         setImage(data.data.url);
       } else {
@@ -217,7 +223,13 @@ export function CategoryManagementView() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to save category.");
       }

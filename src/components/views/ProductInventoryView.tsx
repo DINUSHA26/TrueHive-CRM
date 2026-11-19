@@ -95,32 +95,41 @@ export function ProductInventoryView({
     return "General";
   };
 
-  const filteredProducts = products.filter((p) => {
-    const q = search.toLowerCase();
+  const safeProducts = Array.isArray(products) ? products : [];
+  const safeIngredients = Array.isArray(ingredients) ? ingredients : [];
+
+  const filteredProducts = safeProducts.filter((p) => {
+    if (!p) return false;
+    const q = (search || "").toLowerCase();
     const catName = getCategoryName(p.category);
+    const pName = (p.name || "").toLowerCase();
+    const pSku = (p.sku || "").toLowerCase();
+    const pBarcode = (p.barcode || "").toLowerCase();
+    const cName = catName.toLowerCase();
+
     const matchesSearch =
       !search ||
-      p.name.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      p.barcode.includes(q) ||
-      catName.toLowerCase().includes(q);
+      pName.includes(q) ||
+      pSku.includes(q) ||
+      pBarcode.includes(q) ||
+      cName.includes(q);
 
     const matchesCategory =
       categoryFilter === "all" ||
       p.categoryId === categoryFilter ||
-      catName.toLowerCase() === categoryFilter.toLowerCase();
+      cName === categoryFilter.toLowerCase();
 
     return matchesSearch && matchesCategory;
   });
 
-  const filteredIngredients = ingredients.filter((i) => {
+  const filteredIngredients = safeIngredients.filter((i) => {
+    if (!i) return false;
     if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      i.name.toLowerCase().includes(q) ||
-      i.sku.toLowerCase().includes(q) ||
-      i.supplierName.toLowerCase().includes(q)
-    );
+    const q = (search || "").toLowerCase();
+    const iName = (i.name || "").toLowerCase();
+    const iSku = (i.sku || "").toLowerCase();
+    const iSupplier = (i.supplierName || (i as any).supplier?.name || "").toLowerCase();
+    return iName.includes(q) || iSku.includes(q) || iSupplier.includes(q);
   });
 
   const handleOpenCreateProduct = () => {
@@ -180,7 +189,13 @@ export function ProductInventoryView({
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to save ingredient");
       }
@@ -208,7 +223,13 @@ export function ProductInventoryView({
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to delete ingredient");
       }
@@ -230,9 +251,9 @@ export function ProductInventoryView({
   };
 
   // Stats
-  const totalProducts = products.length;
-  const activeProducts = products.filter((p) => p.isActive !== false).length;
-  const lowStockProducts = products.filter((p) => p.currentStock <= (p.reorderLevel || 5)).length;
+  const totalProducts = safeProducts.length;
+  const activeProducts = safeProducts.filter((p) => p.isActive !== false).length;
+  const lowStockProducts = safeProducts.filter((p) => (p.currentStock || 0) <= (p.reorderLevel || 5)).length;
 
   return (
     <div className="space-y-6">

@@ -75,19 +75,20 @@ export function BarcodeGeneratorModal({
       ? product.variants?.find((v) => v.id === selectedVariantId)
       : null;
 
+  const basePrice = Number((product as any).sellingPrice ?? product.price ?? 0);
   const currentPrice = selectedVariant
     ? selectedVariant.sellingPrice !== undefined
       ? Number(selectedVariant.sellingPrice)
-      : Number(product.price) + Number(selectedVariant.priceAdjustment || 0)
-    : Number(product.price);
+      : basePrice + Number(selectedVariant.priceAdjustment || 0)
+    : basePrice;
 
   const rawCode = selectedVariant?.barcode || selectedVariant?.sku || product.barcode || product.sku;
   const barcodeValue =
     rawCode && rawCode.trim().length > 0
-      ? rawCode.trim()
+      ? rawCode.trim().replace(/[^\w-]/g, "")
       : selectedVariant
-      ? `VAR-${selectedVariant.id.slice(-6).toUpperCase()}`
-      : `PRD-${product.id.slice(-6).toUpperCase()}`;
+      ? `VAR-${(selectedVariant.id || "000000").slice(-6).toUpperCase()}`
+      : `PRD-${(product.id || "000000").slice(-6).toUpperCase()}`;
 
   const variantLabel = selectedVariant
     ? `${selectedVariant.name}${selectedVariant.value ? `: ${selectedVariant.value}` : ""}`

@@ -58,7 +58,13 @@ export function StockUpdateModal({
         }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
       if (!res.ok || !data.success) {
         throw new Error(data.error || "Failed to update stock");
       }
