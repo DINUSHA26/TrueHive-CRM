@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { InvoiceManagementView } from "@/components/views/InvoiceManagementView";
 import { OfficialA4InvoiceModal } from "@/components/OfficialA4InvoiceModal";
+import { NAV_ROUTES } from "@/components/layout/Sidebar";
 import type { OrderRecord, ProductItem } from "@/lib/store";
 import type { CustomerRecord } from "@/components/views/CrmView";
 
@@ -71,7 +72,10 @@ export default function InvoicesPage() {
       activeNav="INVOICES"
       onSelectNav={(nav) => {
         if (nav === "INVOICES") return;
-        window.location.href = `/?nav=${nav}`;
+        const target = NAV_ROUTES[nav];
+        if (target) {
+          window.location.href = target;
+        }
       }}
       onRefresh={fetchData}
       isRefreshing={isRefreshing}

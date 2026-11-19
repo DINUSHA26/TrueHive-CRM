@@ -17,10 +17,23 @@ import {
   X,
   Gift,
   RefreshCw,
+  Package,
+  Sliders,
+  Truck,
+  Store,
+  MapPin,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { CameraBarcodeScannerModal } from "@/components/CameraBarcodeScannerModal";
+import { BarcodeDisplay } from "@/components/BarcodeDisplay";
+import {
+  ReceiptInvoiceSettingsModal,
+  getReceiptSettings,
+  DEFAULT_RECEIPT_SETTINGS,
+  type ReceiptSettings,
+} from "@/components/ReceiptInvoiceSettingsModal";
 import { useHardwareBarcodeScanner } from "@/lib/barcode/useBarcodeScanner";
 import type { ProductItem, IngredientItem, OrderRecord } from "@/lib/store";
 
@@ -69,6 +82,16 @@ export function PosPanelView({
   const [customerPhone, setCustomerPhone] = useState("");
   const [heldBills, setHeldBills] = useState<HeldBill[]>([]);
 
+  // Fulfillment & Handover Type (Store Pickup vs Courier Delivery)
+  const [fulfillmentType, setFulfillmentType] = useState<"STORE_PICKUP" | "COURIER_DELIVERY">("STORE_PICKUP");
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+  const [courierPartner, setCourierPartner] = useState("Koombiyo");
+
+  // Receipt & Bill Customization Settings
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [receiptSettings, setReceiptSettings] = useState<ReceiptSettings>(DEFAULT_RECEIPT_SETTINGS);
+
   // Charges, Discounts, Taxes
   const [billDiscountInput, setBillDiscountInput] = useState<number>(0);
   const [vatInput, setVatInput] = useState<number>(0);
@@ -111,8 +134,9 @@ export function PosPanelView({
     fetchRecentOrders();
   }, [fetchRecentOrders]);
 
-  // Load business name from settings if available
+  // Load business name and receipt customization settings
   useEffect(() => {
+    setReceiptSettings(getReceiptSettings());
     const fetchSettings = async () => {
       try {
         const res = await fetch("/api/settings");
@@ -270,6 +294,10 @@ export function PosPanelView({
         customerName: customerName.trim() || "Walk-in Customer",
         customerPhone: customerPhone.trim() || "POS-Counter",
         paymentMethod: backendMethodMap[paymentMethod],
+        fulfillmentType,
+        shippingAddress: fulfillmentType === "COURIER_DELIVERY" ? shippingAddress.trim() : undefined,
+        deliveryCity: fulfillmentType === "COURIER_DELIVERY" ? deliveryCity.trim() : undefined,
+        courierPartner: fulfillmentType === "COURIER_DELIVERY" ? courierPartner : undefined,
         items: cart.map((i) => ({
           productId: i.product.id,
           quantity: i.quantity,
@@ -301,6 +329,10 @@ export function PosPanelView({
           orderNumber: data.orderNumber || data.order.orderNumber,
           createdAt: data.order.createdAt || new Date().toISOString(),
           paymentMethod: paymentMethod,
+          fulfillmentType,
+          shippingAddress: fulfillmentType === "COURIER_DELIVERY" ? shippingAddress : undefined,
+          deliveryCity: fulfillmentType === "COURIER_DELIVERY" ? deliveryCity : undefined,
+          courierPartner: fulfillmentType === "COURIER_DELIVERY" ? courierPartner : undefined,
           items: cart.map((item, idx) => ({
             index: idx + 1,
             name: item.product.name,
@@ -328,6 +360,9 @@ export function PosPanelView({
         setCart([]);
         setCustomerName("");
         setCustomerPhone("");
+        setFulfillmentType("STORE_PICKUP");
+        setShippingAddress("");
+        setDeliveryCity("");
         setBillDiscountInput(0);
         setVatInput(0);
         setServiceChargesInput(0);
@@ -540,31 +575,49 @@ export function PosPanelView({
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className={`p-3 rounded-xl border text-left transition flex flex-col justify-between group ${
+                  className={`p-2.5 rounded-2xl border text-left transition flex flex-col justify-between group overflow-hidden ${
                     inCart
-                      ? "border-blue-500/60 bg-blue-950/20"
+                      ? "border-blue-500/70 bg-blue-950/20 shadow-md shadow-blue-500/10"
                       : "border-slate-800/80 bg-[#0b1329] hover:border-slate-700"
                   }`}
                 >
+                  {/* Product Image Thumbnail */}
+                  <div className="w-full h-24 sm:h-28 rounded-xl bg-slate-900 border border-slate-800/80 mb-2 overflow-hidden flex items-center justify-center relative">
+                    {p.imageUrl ? (
+                      <img
+                        src={p.imageUrl}
+                        alt={p.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center text-slate-600 gap-1">
+                        <Package className="w-7 h-7 text-slate-700" />
+                        <span className="text-[9px] font-mono uppercase text-slate-600">No Image</span>
+                      </div>
+                    )}
+                    {inCart && (
+                      <div className="absolute top-1.5 right-1.5 px-2 py-0.5 rounded-full bg-blue-600 text-white font-bold text-[10px] shadow">
+                        {inCart.quantity} in cart
+                      </div>
+                    )}
+                  </div>
+
                   <div>
-                    <div className="flex items-center justify-between gap-1 mb-1">
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
                       <span className="text-[10px] font-mono text-slate-400">{p.sku}</span>
-                      {inCart && (
-                        <span className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center">
-                          {inCart.quantity}
-                        </span>
-                      )}
+                      <span className="text-[10px] text-slate-400">Stk: {p.currentStock}</span>
                     </div>
                     <p className="text-xs font-semibold text-white group-hover:text-blue-400 transition line-clamp-2">
                       {p.name}
                     </p>
                   </div>
-                  <div className="mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between">
+                  <div className="mt-2 pt-1.5 border-t border-slate-800/60 flex items-center justify-between">
                     <span className="text-xs font-bold text-white">
                       Rs.{p.sellingPrice.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-slate-400">
-                      Stk: {p.currentStock}
+                    <span className="text-[10px] text-emerald-400 font-medium">
+                      + Add
                     </span>
                   </div>
                 </button>
@@ -582,6 +635,15 @@ export function PosPanelView({
               <p className="text-xs text-slate-400">Auto Generate</p>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setReceiptModalOpen(true)}
+                leftIcon={<Sliders className="w-3.5 h-3.5 text-indigo-400" />}
+                className="text-xs shrink-0"
+              >
+                Bill Format
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -636,6 +698,92 @@ export function PosPanelView({
             </div>
           </div>
 
+          {/* Fulfillment Mode: Store Pickup vs Courier Delivery */}
+          <div className="p-3 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                {fulfillmentType === "STORE_PICKUP" ? (
+                  <Store className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Truck className="w-3.5 h-3.5 text-blue-400" />
+                )}
+                Fulfillment Mode:
+              </span>
+              <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType("STORE_PICKUP")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                    fulfillmentType === "STORE_PICKUP"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Store className="w-3.5 h-3.5" />
+                  Store Pickup
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFulfillmentType("COURIER_DELIVERY")}
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
+                    fulfillmentType === "COURIER_DELIVERY"
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <Truck className="w-3.5 h-3.5" />
+                  Courier Delivery
+                </button>
+              </div>
+            </div>
+
+            {fulfillmentType === "COURIER_DELIVERY" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-slate-800/80">
+                <div>
+                  <label className="text-[10px] text-slate-400 font-semibold block mb-1">
+                    Courier Partner
+                  </label>
+                  <select
+                    value={courierPartner}
+                    onChange={(e) => setCourierPartner(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="Koombiyo">Koombiyo Delivery</option>
+                    <option value="Pronto">Pronto Lanka</option>
+                    <option value="Domex">Domex Courier</option>
+                    <option value="Certis">Certis Lanka</option>
+                    <option value="Fardar">Fardar Express</option>
+                    <option value="In-house">In-house Rider</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-semibold block mb-1">
+                    Delivery City / Town
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Colombo, Kandy"
+                    value={deliveryCity}
+                    onChange={(e) => setDeliveryCity(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-slate-400 font-semibold block mb-1">
+                    Shipping Address / Street
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="House / Street address"
+                    value={shippingAddress}
+                    onChange={(e) => setShippingAddress(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Cart Items Table (Horizontal scrolling on mobile) */}
           <div className="border border-slate-800 rounded-2xl overflow-hidden bg-slate-950/40">
             <div className="overflow-x-auto min-w-[540px]">
@@ -663,10 +811,21 @@ export function PosPanelView({
                       return (
                         <tr key={item.product.id} className="hover:bg-slate-900/40 transition">
                           <td className="py-3 px-3">
-                            <p className="font-bold text-white line-clamp-1">{item.product.name}</p>
-                            <p className="text-[11px] text-slate-400">
-                              Rs.{item.product.sellingPrice.toLocaleString()}
-                            </p>
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 overflow-hidden shrink-0 flex items-center justify-center">
+                                {item.product.imageUrl ? (
+                                  <img src={item.product.imageUrl} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <Package className="w-4 h-4 text-slate-600" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-bold text-white line-clamp-1">{item.product.name}</p>
+                                <p className="text-[11px] text-slate-400">
+                                  Rs.{item.product.sellingPrice.toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
                           </td>
                           <td className="py-3 px-2 text-center">
                             <span className="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-semibold text-slate-300">
@@ -989,28 +1148,68 @@ export function PosPanelView({
         </div>
       </div>
 
-      {/* INVOICE DETAILS MODAL (Image 4 - Receipt Layout) */}
+      {/* INVOICE DETAILS MODAL (Customizable Thermal / A4 Receipt Layout) */}
       {viewingInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="relative w-full max-w-md bg-white text-slate-950 rounded-3xl shadow-2xl p-6 sm:p-7 space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200">
+          <div
+            className={`relative w-full ${
+              receiptSettings.paperWidth === "58mm"
+                ? "max-w-[320px]"
+                : receiptSettings.paperWidth === "A4"
+                ? "max-w-2xl"
+                : "max-w-md"
+            } bg-white text-slate-950 rounded-3xl shadow-2xl p-6 sm:p-7 space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200`}
+          >
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-              <h3 className="text-base font-bold text-slate-900">Invoice Details</h3>
-              <button
-                onClick={() => setViewingInvoice(null)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-bold text-slate-900">Invoice Details</h3>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">
+                  {receiptSettings.paperWidth}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setReceiptModalOpen(true)}
+                  title="Format Settings"
+                  className="p-1.5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition"
+                >
+                  <Sliders className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewingInvoice(null)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Printable Thermal Receipt Card */}
-            <div id="pos-thermal-receipt" className="space-y-3 font-mono text-xs text-slate-900">
-              {/* Business Name */}
+            <div
+              id="pos-thermal-receipt"
+              className={`space-y-3 font-mono text-slate-900 ${
+                receiptSettings.fontSize === "compact" ? "text-[11px]" : "text-xs"
+              }`}
+            >
+              {/* Business Name & Header */}
               <div className="text-center py-1">
                 <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                  {businessName}
+                  {receiptSettings.businessName || businessName}
                 </h2>
+                {receiptSettings.subHeader && (
+                  <p className="text-[11px] text-slate-600 font-sans">{receiptSettings.subHeader}</p>
+                )}
+                {receiptSettings.address && (
+                  <p className="text-[10px] text-slate-500 mt-0.5">{receiptSettings.address}</p>
+                )}
+                {receiptSettings.phone && (
+                  <p className="text-[10px] text-slate-500">Tel: {receiptSettings.phone}</p>
+                )}
+                {receiptSettings.vatNumber && (
+                  <p className="text-[10px] text-slate-500 font-bold">VAT No: {receiptSettings.vatNumber}</p>
+                )}
               </div>
 
               <div className="border-t border-dashed border-slate-400 my-2" />
@@ -1018,12 +1217,36 @@ export function PosPanelView({
               {/* Meta Info */}
               <div className="space-y-1 text-[11px]">
                 <div className="flex justify-between">
-                  <span>Invoice number : <strong className="font-bold">{viewingInvoice.orderNumber}</strong></span>
-                  <span>Invoiced date : {new Date(viewingInvoice.createdAt).toLocaleDateString("en-CA")} {new Date(viewingInvoice.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                  <span>
+                    Invoice : <strong className="font-bold">{viewingInvoice.orderNumber}</strong>
+                  </span>
+                  <span>
+                    {new Date(viewingInvoice.createdAt).toLocaleDateString("en-CA")}{" "}
+                    {new Date(viewingInvoice.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
                 </div>
-                <div>
-                  <span>Payment method : <strong>{viewingInvoice.paymentMethod}</strong></span>
+                <div className="flex justify-between">
+                  <span>
+                    Payment : <strong>{viewingInvoice.paymentMethod}</strong>
+                  </span>
+                  <span>
+                    Mode :{" "}
+                    <strong>
+                      {viewingInvoice.fulfillmentType === "COURIER_DELIVERY"
+                        ? `Courier (${viewingInvoice.courierPartner || "Standard"})`
+                        : "Store Pickup"}
+                    </strong>
+                  </span>
                 </div>
+                {viewingInvoice.deliveryCity && (
+                  <div className="text-[10px] text-slate-600">
+                    Ship to: {viewingInvoice.deliveryCity}{" "}
+                    {viewingInvoice.shippingAddress ? `(${viewingInvoice.shippingAddress})` : ""}
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-dashed border-slate-400 my-2" />
@@ -1044,10 +1267,13 @@ export function PosPanelView({
                         <p className="font-bold text-slate-950">
                           {item.index}. {item.name}
                         </p>
-                        {item.sku && <p className="text-[10px] text-slate-500">{item.sku}</p>}
-                        {(item.offers > 0 || item.unitOffer > 0) && (
+                        {receiptSettings.showSku && item.sku && (
+                          <p className="text-[10px] text-slate-500 font-mono">{item.sku}</p>
+                        )}
+                        {receiptSettings.showDiscounts && (item.offers > 0 || item.unitOffer > 0) && (
                           <p className="text-[10px] text-rose-600 font-bold">
-                            Offer: -Rs.{(item.offers || (item.unitOffer * item.quantity)).toLocaleString()}
+                            Offer: -Rs.
+                            {(item.offers || item.unitOffer * item.quantity).toLocaleString()}
                           </p>
                         )}
                       </td>
@@ -1076,55 +1302,122 @@ export function PosPanelView({
                   <div className="flex justify-between text-rose-600 font-semibold">
                     <span>Discount total (Rs.) :</span>
                     <span>
-                      -Rs.{viewingInvoice.totalDiscount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      -Rs.
+                      {viewingInvoice.totalDiscount?.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                      })}
                     </span>
                   </div>
                 )}
                 {viewingInvoice.vat > 0 && (
                   <div className="flex justify-between">
                     <span>VAT :</span>
-                    <span>Rs.{viewingInvoice.vat?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>
+                      Rs.{viewingInvoice.vat?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
                   </div>
                 )}
                 {viewingInvoice.serviceCharges > 0 && (
                   <div className="flex justify-between">
                     <span>Service Charge :</span>
-                    <span>Rs.{viewingInvoice.serviceCharges?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>
+                      Rs.
+                      {viewingInvoice.serviceCharges?.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                 )}
                 {viewingInvoice.deliveryCharges > 0 && (
                   <div className="flex justify-between">
                     <span>Delivery Fee :</span>
-                    <span>Rs.{viewingInvoice.deliveryCharges?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                    <span>
+                      Rs.
+                      {viewingInvoice.deliveryCharges?.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between font-black text-sm pt-1 border-t border-slate-300">
                   <span>Total :</span>
-                  <span>Rs.{viewingInvoice.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span>
+                    Rs.{viewingInvoice.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Paid amount :</span>
-                  <span>Rs.{viewingInvoice.paidAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span>
+                    Rs.{viewingInvoice.paidAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
                 <div className="flex justify-between text-blue-700 font-bold">
                   <span>Balance :</span>
-                  <span>Rs.{viewingInvoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                  <span>
+                    Rs.{viewingInvoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  </span>
                 </div>
               </div>
 
+              {/* Barcode & QR Code Section */}
+              {(receiptSettings.showBarcode || receiptSettings.showQrCode) && (
+                <div className="pt-2 text-center flex flex-col items-center justify-center gap-1.5 border-t border-dashed border-slate-400">
+                  {receiptSettings.showBarcode && viewingInvoice.orderNumber && (
+                    <div className="scale-95 origin-center">
+                      <BarcodeDisplay
+                        value={viewingInvoice.orderNumber}
+                        height={
+                          receiptSettings.barcodeHeight === "small"
+                            ? 30
+                            : receiptSettings.barcodeHeight === "large"
+                            ? 65
+                            : 45
+                        }
+                        width={1.4}
+                        fontSize={10}
+                      />
+                    </div>
+                  )}
+
+                  {receiptSettings.showQrCode && (
+                    <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-sans">
+                      <QrCode className="w-3.5 h-3.5 text-slate-700" />
+                      <span>Scan to verify order #{viewingInvoice.orderNumber}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="border-t border-dashed border-slate-400 my-2" />
 
-              <div className="text-center py-2 text-slate-800 font-bold text-xs">
-                Thank you! Come again!
+              {/* Footer Note & Return Policy */}
+              <div className="text-center py-1 space-y-1">
+                <div className="text-slate-900 font-bold text-xs">
+                  {receiptSettings.footerNote || "Thank you! Come again!"}
+                </div>
+                {receiptSettings.returnPolicy && (
+                  <div className="text-[10px] text-slate-500 italic">
+                    {receiptSettings.returnPolicy}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Print Button */}
-            <div className="pt-2">
+            <div className="pt-2 flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="lg"
+                className="flex-1 rounded-2xl text-xs"
+                onClick={() => setReceiptModalOpen(true)}
+                leftIcon={<Sliders className="w-4 h-4 text-slate-600" />}
+              >
+                Format
+              </Button>
               <Button
                 variant="primary"
                 size="lg"
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-2xl flex items-center justify-center gap-2"
+                className="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-2xl flex items-center justify-center gap-2"
                 onClick={() => window.print()}
               >
                 <Printer className="w-4 h-4" />
@@ -1134,6 +1427,13 @@ export function PosPanelView({
           </div>
         </div>
       )}
+
+      {/* Bill & Receipt Customization Modal */}
+      <ReceiptInvoiceSettingsModal
+        isOpen={receiptModalOpen}
+        onClose={() => setReceiptModalOpen(false)}
+        onSettingsSaved={(newSettings) => setReceiptSettings(newSettings)}
+      />
 
       {/* Camera scanner modal */}
       <CameraBarcodeScannerModal

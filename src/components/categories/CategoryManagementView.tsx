@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
+import { compressImageClient } from "@/lib/image-compression";
 
 export interface CategoryTreeItem {
   id: string;
@@ -126,13 +127,16 @@ export function CategoryManagementView() {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
 
     setUploadingImage(true);
     setErrorMsg("");
 
     try {
+      // Compress image client-side to < 200KB to prevent 413 Payload Too Large
+      const file = await compressImageClient(rawFile, 1200, 1200, 0.82);
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", "categories");
@@ -149,8 +153,9 @@ export function CategoryManagementView() {
         throw new Error(`Upload server responded with status ${res.status}`);
       }
 
-      if (data.success && data.data?.url) {
-        setImage(data.data.url);
+      const uploadedUrl = data.data?.url || data.url;
+      if (data.success && uploadedUrl) {
+        setImage(uploadedUrl);
       } else {
         throw new Error(data.error || "Upload failed");
       }

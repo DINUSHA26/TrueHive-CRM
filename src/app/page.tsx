@@ -170,6 +170,17 @@ export default function TrueHiveWorkspace() {
     };
   }, [fetchAllData]);
 
+  // Sync activeNav with ?nav= query parameter if present
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const navParam = params.get("nav") as NavKey | null;
+      if (navParam) {
+        setActiveNav(navParam);
+      }
+    }
+  }, []);
+
   // Real-time polling for WhatsApp chats when on chat view
   useEffect(() => {
     if (activeNav !== "WHATSAPP_CHAT") return;

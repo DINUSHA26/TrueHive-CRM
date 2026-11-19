@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { QuotationsView } from "@/components/views/QuotationsView";
+import { NAV_ROUTES } from "@/components/layout/Sidebar";
 import { OfficialA4InvoiceModal } from "@/components/OfficialA4InvoiceModal";
 import type { OrderRecord, ProductItem } from "@/lib/store";
 import type { CustomerRecord } from "@/components/views/CrmView";
@@ -64,7 +65,10 @@ export default function QuotationsPage() {
       activeNav="QUOTATIONS"
       onSelectNav={(nav) => {
         if (nav === "QUOTATIONS") return;
-        window.location.href = `/?nav=${nav}`;
+        const target = NAV_ROUTES[nav];
+        if (target) {
+          window.location.href = target;
+        }
       }}
       onRefresh={fetchData}
       isRefreshing={isRefreshing}

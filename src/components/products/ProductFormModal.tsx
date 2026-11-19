@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
+import { compressImageClient } from "@/lib/image-compression";
 
 export interface FormProductVariant {
   id?: string;
@@ -125,7 +126,7 @@ export function ProductFormModal({
     }
   }, [isOpen, initialProduct, categories]);
 
-  // Handle Cloudinary Image Upload
+  // Handle Cloudinary Image Upload with Client-Side Compression
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -137,7 +138,10 @@ export function ProductFormModal({
       const newUploaded: Array<{ url: string; position: number }> = [];
 
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+        const rawFile = files[i];
+        // Compress client-side to prevent 413 Payload Too Large
+        const file = await compressImageClient(rawFile, 1200, 1200, 0.82);
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("folder", "products");
@@ -154,9 +158,10 @@ export function ProductFormModal({
           throw new Error(`Upload server returned status ${res.status}`);
         }
 
-        if (data.success && data.data?.url) {
+        const uploadedUrl = data.data?.url || data.url;
+        if (data.success && uploadedUrl) {
           newUploaded.push({
-            url: data.data.url,
+            url: uploadedUrl,
             position: images.length + newUploaded.length,
           });
         } else {
