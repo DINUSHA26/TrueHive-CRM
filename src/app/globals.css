@@ -507,6 +507,70 @@ html.light .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.4);
 }
 
+/* ========================================================
+   LOGIN PAGE SPECIFIC LIGHT THEME GUARANTEE
+   ======================================================== */
+html.light .login-page-bg {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html.light .login-card-container {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(226, 232, 240, 0.8) !important;
+}
+
+html.light .login-left-panel {
+  background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 60%, #eef2ff 100%) !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .login-right-panel {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+html.light .login-input-field {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light .login-input-field:focus {
+  background-color: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 1px #2563eb !important;
+}
+
+html.light .login-heading {
+  color: #0f172a !important;
+}
+
+html.light .login-subtext {
+  color: #475569 !important;
+}
+
+html.light .login-muted {
+  color: #64748b !important;
+}
+
+/* Notification Dropdown Light Theme */
+html.light .notif-dropdown {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.light .notif-dropdown * {
+  border-color: #e2e8f0 !important;
+}
+
+html.light .notif-item:hover {
+  background-color: #f8fafc !important;
+}
+
 @media print {
   .no-print,
   nav,

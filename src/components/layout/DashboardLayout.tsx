@@ -161,6 +161,8 @@ export function DashboardLayout({
           }}
           lowStockCount={liveLowStock}
           unreadChatsCount={liveBadges.whatsappChat || 0}
+          pendingOrdersCount={liveBadges.orderManagement || 0}
+          onSelectNav={onSelectNav}
           onLogout={onLogout}
         />
 
