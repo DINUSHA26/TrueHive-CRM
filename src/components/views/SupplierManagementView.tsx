@@ -72,13 +72,13 @@ export function SupplierManagementView({
 
   // Issue PO State
   const [poModalOpen, setPoModalOpen] = useState(false);
-  const [selectedSupplierId, setSelectedSupplierId] = useState(suppliers[0]?.id || "");
-  const [poItemType, setPoItemType] = useState<"PRODUCT" | "INGREDIENT">("INGREDIENT");
+  const [selectedSupplierId, setSelectedSupplierId] = useState("");
+  const [poItemType, setPoItemType] = useState<"PRODUCT" | "INGREDIENT">("PRODUCT");
   const [selectedItemId, setSelectedItemId] = useState("");
   const [customItemName, setCustomItemName] = useState("");
-  const [poUnit, setPoUnit] = useState("kg");
-  const [poQty, setPoQty] = useState<number | "">(10);
-  const [poUnitCost, setPoUnitCost] = useState<number | "">(250);
+  const [poUnit, setPoUnit] = useState("pcs");
+  const [poQty, setPoQty] = useState<number | "">("");
+  const [poUnitCost, setPoUnitCost] = useState<number | "">("");
   const [poExpectedDate, setPoExpectedDate] = useState("");
   const [poNotes, setPoNotes] = useState("");
   const [creatingPo, setCreatingPo] = useState(false);
@@ -119,28 +119,29 @@ export function SupplierManagementView({
     if (ingredients.length > 0) setLiveIngredients(ingredients);
   }, [products, ingredients]);
 
-  // Set default selection when modal opens or itemType changes
-  useEffect(() => {
-    if (poItemType === "PRODUCT") {
-      if (liveProducts.length > 0) {
-        setSelectedItemId(liveProducts[0].id);
-        setPoUnit(liveProducts[0].unit || "pcs");
-        setPoUnitCost(liveProducts[0].calculatedCogs || 100);
-      } else {
-        setSelectedItemId("");
-        setPoUnit("pcs");
-      }
-    } else {
-      if (liveIngredients.length > 0) {
-        setSelectedItemId(liveIngredients[0].id);
-        setPoUnit(liveIngredients[0].unit || "kg");
-        setPoUnitCost(liveIngredients[0].unitCost || 250);
-      } else {
-        setSelectedItemId("");
-        setPoUnit("kg");
-      }
-    }
-  }, [poItemType, liveProducts, liveIngredients]);
+  // Open Issue PO Modal with clean/blank fields
+  const handleOpenPoModal = (supplierId?: string) => {
+    setSelectedSupplierId(supplierId || "");
+    setPoItemType("PRODUCT");
+    setSelectedItemId("");
+    setCustomItemName("");
+    setPoUnit("pcs");
+    setPoQty("");
+    setPoUnitCost("");
+    setPoExpectedDate("");
+    setPoNotes("");
+    setPoModalOpen(true);
+  };
+
+  // Switch Item Type in PO modal (resets selected items to blank)
+  const handleSwitchItemType = (type: "PRODUCT" | "INGREDIENT") => {
+    setPoItemType(type);
+    setSelectedItemId("");
+    setCustomItemName("");
+    setPoUnit(type === "PRODUCT" ? "pcs" : "kg");
+    setPoUnitCost("");
+    setPoQty("");
+  };
 
   // Fetch POs and refresh live lists from backend
   const fetchPos = useCallback(async () => {
@@ -162,6 +163,11 @@ export function SupplierManagementView({
   // Handle Item selection change in PO modal
   const handleItemSelectChange = (id: string) => {
     setSelectedItemId(id);
+    if (!id) {
+      setPoUnit(poItemType === "PRODUCT" ? "pcs" : "kg");
+      setPoUnitCost("");
+      return;
+    }
     if (poItemType === "PRODUCT") {
       const prod = liveProducts.find((p) => p.id === id);
       if (prod) {
@@ -473,7 +479,7 @@ export function SupplierManagementView({
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setPoModalOpen(true)}
+            onClick={() => handleOpenPoModal()}
             leftIcon={<FileCheck className="w-4 h-4" />}
           >
             Issue PO
@@ -592,10 +598,7 @@ export function SupplierManagementView({
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => {
-                                setSelectedSupplierId(sup.id);
-                                setPoModalOpen(true);
-                              }}
+                              onClick={() => handleOpenPoModal(sup.id)}
                               className="text-xs py-1 px-2.5"
                               leftIcon={<FileCheck className="w-3.5 h-3.5 text-blue-400" />}
                             >
@@ -642,7 +645,7 @@ export function SupplierManagementView({
                 title="No purchase orders found"
                 description="Issue purchase orders for finished goods or raw materials to restock your warehouse."
                 actionLabel="Issue Purchase Order"
-                onAction={() => setPoModalOpen(true)}
+                onAction={() => handleOpenPoModal()}
               />
             ) : (
               <div className="overflow-x-auto">
@@ -770,7 +773,7 @@ export function SupplierManagementView({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setPoItemType("PRODUCT")}
+                onClick={() => handleSwitchItemType("PRODUCT")}
                 className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-semibold transition ${
                   poItemType === "PRODUCT"
                     ? "bg-blue-600/20 border-blue-500 text-blue-400 shadow-sm"
@@ -782,7 +785,7 @@ export function SupplierManagementView({
               </button>
               <button
                 type="button"
-                onClick={() => setPoItemType("INGREDIENT")}
+                onClick={() => handleSwitchItemType("INGREDIENT")}
                 className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-semibold transition ${
                   poItemType === "INGREDIENT"
                     ? "bg-emerald-600/20 border-emerald-500 text-emerald-400 shadow-sm"
@@ -806,6 +809,7 @@ export function SupplierManagementView({
               required
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-blue-500"
             >
+              <option value="">-- Select Supplier --</option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.contactPerson || "Primary Contact"})

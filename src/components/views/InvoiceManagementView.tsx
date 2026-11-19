@@ -48,6 +48,9 @@ interface Props {
   orders?: OrderRecord[];
   products?: ProductItem[];
   customers?: CustomerRecord[];
+  creditBills?: any[];
+  supplierBills?: any[];
+  purchaseOrders?: any[];
   onRefresh?: () => void;
   onOpenA4Invoice?: (order: OrderRecord) => void;
 }
@@ -381,6 +384,9 @@ export function InvoiceManagementView({
   orders = [],
   products = [],
   customers = [],
+  creditBills: propCreditBills = [],
+  supplierBills: propSupplierBills = [],
+  purchaseOrders: propPurchaseOrders = [],
   onRefresh,
 }: Props) {
   // State
@@ -395,6 +401,7 @@ export function InvoiceManagementView({
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -412,6 +419,17 @@ export function InvoiceManagementView({
   // Form State for Void Modal
   const [voidReasonText, setVoidReasonText] = useState<string>("");
 
+  // Live collections for auto-refresh
+  const [creditBills, setCreditBills] = useState<any[]>(propCreditBills);
+  const [supplierBills, setSupplierBills] = useState<any[]>(propSupplierBills);
+  const [purchaseOrders, setPurchaseOrders] = useState<any[]>(propPurchaseOrders);
+
+  useEffect(() => {
+    if (propCreditBills.length > 0) setCreditBills(propCreditBills);
+    if (propSupplierBills.length > 0) setSupplierBills(propSupplierBills);
+    if (propPurchaseOrders.length > 0) setPurchaseOrders(propPurchaseOrders);
+  }, [propCreditBills, propSupplierBills, propPurchaseOrders]);
+
   // Save changes locally and to backend if possible
   const saveInvoicesState = (newInvoices: InvoiceRecord[]) => {
     setInvoices(newInvoices);
@@ -420,9 +438,15 @@ export function InvoiceManagementView({
     } catch {}
   };
 
-  // Helper to merge live orders into the invoices ledger seamlessly
-  const mergeWithOrders = useCallback(
-    (baseInvoices: InvoiceRecord[], orderList: OrderRecord[]): InvoiceRecord[] => {
+  // Helper to merge live orders, customer credit settlements, and supplier POs into the invoices ledger seamlessly
+  const mergeAllLedgerData = useCallback(
+    (
+      baseInvoices: InvoiceRecord[],
+      orderList: OrderRecord[],
+      cBills: any[],
+      sBills: any[],
+      pOrders: any[]
+    ): InvoiceRecord[] => {
       const cleanBase = baseInvoices.filter((inv) => !isMockInvoice(inv));
       const existingKeys = new Set<string>();
 
@@ -431,7 +455,8 @@ export function InvoiceManagementView({
         if (inv.invoiceNumber) existingKeys.add(inv.invoiceNumber.toLowerCase());
       });
 
-      const synthesized: InvoiceRecord[] = [];
+      // 1. Synthesize from Orders
+      const orderInvoices: InvoiceRecord[] = [];
       orderList.forEach((ord) => {
         const rawNum = ord.orderNumber || ord.id || "";
         const invNum = rawNum.startsWith("INV-")
@@ -442,35 +467,255 @@ export function InvoiceManagementView({
         const keyByNum = invNum.toLowerCase();
 
         if (!existingKeys.has(keyById) && !existingKeys.has(keyByNum)) {
-          synthesized.push(convertOrderToInvoice(ord));
+          orderInvoices.push(convertOrderToInvoice(ord));
           existingKeys.add(keyById);
           existingKeys.add(keyByNum);
         }
       });
 
-      const combined = [...cleanBase, ...synthesized].sort((a, b) => {
+      let allInvoices = [...cleanBase, ...orderInvoices];
+
+      // 2. Apply Customer Credit Settlements (AR payments) to matching invoices
+      const creditBillMap = new Map<string, any>();
+      cBills.forEach((cb) => {
+        if (cb.billNumber) creditBillMap.set(cb.billNumber.toLowerCase(), cb);
+        if (cb.orderId) creditBillMap.set(`ord-${cb.orderId}`, cb);
+      });
+
+      allInvoices = allInvoices.map((inv) => {
+        const cb =
+          creditBillMap.get(inv.invoiceNumber.toLowerCase()) ||
+          (inv.orderId ? creditBillMap.get(`ord-${inv.orderId}`) : undefined);
+        if (cb) {
+          const paid = Number(cb.paidAmount) || 0;
+          const balance = Number(cb.balance);
+          const isSettledPaid = cb.status === "PAID" || balance <= 0;
+          const status: InvoiceStatusType = isSettledPaid ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
+
+          return {
+            ...inv,
+            paidAmount: paid,
+            balance: balance >= 0 ? balance : 0,
+            creditBilled: Number(cb.totalAmount) || inv.totalAmount,
+            status,
+            paymentStatus: status,
+          };
+        }
+        return inv;
+      });
+
+      // Also if a customer credit bill is not yet represented in allInvoices, add it
+      cBills.forEach((cb) => {
+        const billNum = cb.billNumber || `INV-${cb.id.slice(-6)}`;
+        if (!existingKeys.has(billNum.toLowerCase())) {
+          const paid = Number(cb.paidAmount) || 0;
+          const balance = Number(cb.balance);
+          const isSettledPaid = cb.status === "PAID" || balance <= 0;
+          const status: InvoiceStatusType = isSettledPaid ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
+          const issued = cb.dateGiven ? new Date(cb.dateGiven) : new Date();
+
+          allInvoices.push({
+            id: `inv-credit-${cb.id}`,
+            invoiceNumber: billNum,
+            type: "STANDARD",
+            status,
+            issuedAt: cb.dateGiven || new Date().toISOString(),
+            date: issued.toISOString().split("T")[0],
+            time: issued.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+            orderId: cb.orderId,
+            customerId: cb.customerId,
+            customerName: cb.customerName || cb.customer?.name || "Credit Customer",
+            customerPhone: cb.customer?.phone || "",
+            currency: "LKR",
+            subtotal: cb.totalAmount,
+            discountAmount: 0,
+            taxAmount: 0,
+            deliveryFee: 0,
+            totalAmount: cb.totalAmount,
+            paidAmount: paid,
+            creditBilled: cb.totalAmount,
+            balance: balance >= 0 ? balance : 0,
+            returnValue: 0,
+            paymentMethod: "CREDIT",
+            paymentStatus: status,
+            items: [
+              {
+                description: `Customer Credit Sale #${billNum}`,
+                quantity: 1,
+                unit: "pcs",
+                unitPrice: cb.totalAmount,
+                totalPrice: cb.totalAmount,
+              },
+            ],
+            createdAt: cb.createdAt || new Date().toISOString(),
+          });
+          existingKeys.add(billNum.toLowerCase());
+        }
+      });
+
+      // 3. Synthesize Supplier Purchase Orders (PO) and Supplier Bills (AP)
+      const supplierBillMap = new Map<string, any>();
+      sBills.forEach((sb) => {
+        if (sb.poGrnNumber) supplierBillMap.set(sb.poGrnNumber.toLowerCase(), sb);
+        if (sb.billNumber) supplierBillMap.set(sb.billNumber.toLowerCase(), sb);
+      });
+
+      pOrders.forEach((po) => {
+        const poNum = po.poNumber?.startsWith("PO-") ? po.poNumber : `PO-${po.poNumber}`;
+        const key = poNum.toLowerCase();
+
+        if (!existingKeys.has(key)) {
+          const sb = supplierBillMap.get(key) || supplierBillMap.get(po.poNumber?.toLowerCase());
+          const totalCost = Number(po.totalCost) || 0;
+          const paidAmount = sb ? Number(sb.paidAmount) || 0 : (po.status === "COMPLETED" && sb?.status === "PAID" ? totalCost : 0);
+          const balance = sb ? Number(sb.balance) : Math.max(0, totalCost - paidAmount);
+          const isPaid = (paidAmount >= totalCost && totalCost > 0) || sb?.status === "PAID";
+          const status: InvoiceStatusType = isPaid ? "PAID" : paidAmount > 0 ? "PARTIAL" : (po.status === "ISSUED" ? "DRAFT" : "UNPAID");
+
+          const issued = po.createdAt ? new Date(po.createdAt) : new Date();
+
+          allInvoices.push({
+            id: `inv-po-${po.id}`,
+            invoiceNumber: poNum,
+            type: "PURCHASE_PO",
+            status,
+            issuedAt: po.createdAt || new Date().toISOString(),
+            date: issued.toISOString().split("T")[0],
+            time: issued.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+            customerName: `${po.supplierName || "Supplier"} (Supplier)`,
+            customerPhone: po.supplier?.phone || "",
+            billingAddress: po.supplier?.address || "Supplier Procurement",
+            currency: "LKR",
+            subtotal: totalCost,
+            discountAmount: 0,
+            taxAmount: 0,
+            deliveryFee: 0,
+            totalAmount: totalCost,
+            paidAmount,
+            creditBilled: totalCost,
+            balance: balance >= 0 ? balance : 0,
+            returnValue: 0,
+            paymentMethod: "SUPPLIER_PO",
+            paymentStatus: status,
+            items: [
+              {
+                description: po.itemName || "Procurement Goods",
+                quantity: Number(po.quantityOrdered) || 1,
+                unit: po.unit || "pcs",
+                unitPrice: Number(po.unitCost) || 0,
+                totalPrice: totalCost,
+              },
+            ],
+            createdAt: po.createdAt || new Date().toISOString(),
+          });
+          existingKeys.add(key);
+        }
+      });
+
+      // 4. Also add any direct Supplier Bills from sBills not covered by POs
+      sBills.forEach((sb) => {
+        const sbNum = sb.billNumber || `SUP-${sb.id.slice(-6)}`;
+        if (!existingKeys.has(sbNum.toLowerCase())) {
+          const total = Number(sb.totalAmount) || 0;
+          const paid = Number(sb.paidAmount) || 0;
+          const balance = Number(sb.balance);
+          const isPaid = sb.status === "PAID" || balance <= 0;
+          const status: InvoiceStatusType = isPaid ? "PAID" : paid > 0 ? "PARTIAL" : "UNPAID";
+          const issued = sb.invoiceDate || sb.receivedDate ? new Date(sb.invoiceDate || sb.receivedDate) : new Date();
+
+          allInvoices.push({
+            id: `inv-supbill-${sb.id}`,
+            invoiceNumber: sbNum,
+            type: "PURCHASE_PO",
+            status,
+            issuedAt: sb.invoiceDate || sb.receivedDate || new Date().toISOString(),
+            date: issued.toISOString().split("T")[0],
+            time: issued.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+            customerName: `${sb.supplierName || "Supplier"} (Supplier)`,
+            customerPhone: sb.supplier?.phone || "",
+            currency: "LKR",
+            subtotal: total,
+            discountAmount: 0,
+            taxAmount: 0,
+            deliveryFee: 0,
+            totalAmount: total,
+            paidAmount: paid,
+            creditBilled: total,
+            balance: balance >= 0 ? balance : 0,
+            returnValue: 0,
+            paymentMethod: "SUPPLIER_CREDIT",
+            paymentStatus: status,
+            items: [
+              {
+                description: sb.items || `Supplier Purchase #${sbNum}`,
+                quantity: 1,
+                unit: "lot",
+                unitPrice: total,
+                totalPrice: total,
+              },
+            ],
+            createdAt: sb.createdAt || new Date().toISOString(),
+          });
+          existingKeys.add(sbNum.toLowerCase());
+        }
+      });
+
+      allInvoices.sort((a, b) => {
         const timeA = new Date(a.issuedAt || a.createdAt || 0).getTime();
         const timeB = new Date(b.issuedAt || b.createdAt || 0).getTime();
         return timeB - timeA;
       });
 
-      return combined;
+      return allInvoices;
     },
     []
   );
 
-  // Load Invoices from API or LocalStorage
+  // Load Invoices from API or LocalStorage with automatic credit bills & PO sync
   const loadInvoices = useCallback(async () => {
     setIsLoading(true);
     let loadedFromApi: InvoiceRecord[] = [];
+    let activeCBills = creditBills;
+    let activeSBills = supplierBills;
+    let activePOrders = purchaseOrders;
 
     try {
-      const res = await fetch("/api/invoices");
-      if (res.ok) {
-        const data = await res.json();
+      const [invRes, cbRes, sbRes, poRes] = await Promise.allSettled([
+        fetch("/api/invoices"),
+        fetch("/api/credit/customer-bills"),
+        fetch("/api/credit/supplier-bills"),
+        fetch("/api/suppliers"),
+      ]);
+
+      if (invRes.status === "fulfilled" && invRes.value.ok) {
+        const data = await invRes.value.json();
         const list = Array.isArray(data) ? data : (data.data || data.invoices || []);
         if (Array.isArray(list)) {
           loadedFromApi = list.filter((inv: InvoiceRecord) => !isMockInvoice(inv));
+        }
+      }
+
+      if (cbRes.status === "fulfilled" && cbRes.value.ok) {
+        const d = await cbRes.value.json();
+        if (d.bills && Array.isArray(d.bills)) {
+          activeCBills = d.bills;
+          setCreditBills(d.bills);
+        }
+      }
+
+      if (sbRes.status === "fulfilled" && sbRes.value.ok) {
+        const d = await sbRes.value.json();
+        if (d.bills && Array.isArray(d.bills)) {
+          activeSBills = d.bills;
+          setSupplierBills(d.bills);
+        }
+      }
+
+      if (poRes.status === "fulfilled" && poRes.value.ok) {
+        const d = await poRes.value.json();
+        if (d.purchaseOrders && Array.isArray(d.purchaseOrders)) {
+          activePOrders = d.purchaseOrders;
+          setPurchaseOrders(d.purchaseOrders);
         }
       }
     } catch {
@@ -489,29 +734,41 @@ export function InvoiceManagementView({
       } catch {}
     }
 
-    const merged = mergeWithOrders(loadedFromApi, orders);
+    const merged = mergeAllLedgerData(
+      loadedFromApi,
+      orders,
+      activeCBills,
+      activeSBills,
+      activePOrders
+    );
     setInvoices(merged);
     try {
       localStorage.setItem("truehive_invoices_cache", JSON.stringify(merged));
     } catch {}
     setIsLoading(false);
-  }, [orders, mergeWithOrders]);
+  }, [orders, creditBills, supplierBills, purchaseOrders, mergeAllLedgerData]);
 
   useEffect(() => {
     loadInvoices();
   }, [loadInvoices]);
 
   useEffect(() => {
-    if (orders.length > 0) {
+    if (orders.length > 0 || creditBills.length > 0 || supplierBills.length > 0 || purchaseOrders.length > 0) {
       setInvoices((prev) => {
-        const merged = mergeWithOrders(prev, orders);
+        const merged = mergeAllLedgerData(
+          prev,
+          orders,
+          creditBills,
+          supplierBills,
+          purchaseOrders
+        );
         try {
           localStorage.setItem("truehive_invoices_cache", JSON.stringify(merged));
         } catch {}
         return merged;
       });
     }
-  }, [orders, mergeWithOrders]);
+  }, [orders, creditBills, supplierBills, purchaseOrders, mergeAllLedgerData]);
 
   // Sync Orders into Invoices (triggers backend sync and re-merges)
   const handleSyncOrders = async () => {
@@ -567,9 +824,15 @@ export function InvoiceManagementView({
         if (inv.status !== statusFilter) return false;
       }
 
+      // Type / Category
+      if (typeFilter !== "ALL") {
+        if (typeFilter === "SALES" && inv.type === "PURCHASE_PO") return false;
+        if (typeFilter === "PURCHASE_PO" && inv.type !== "PURCHASE_PO") return false;
+      }
+
       return true;
     });
-  }, [invoices, searchQuery, singleDate, selectedMonth, fromDate, toDate, statusFilter]);
+  }, [invoices, searchQuery, singleDate, selectedMonth, fromDate, toDate, statusFilter, typeFilter]);
 
   // Executive LKpos KPIs calculated dynamically over filtered set
   const kpiStats = useMemo(() => {
@@ -609,6 +872,7 @@ export function InvoiceManagementView({
     setFromDate("");
     setToDate("");
     setStatusFilter("ALL");
+    setTypeFilter("ALL");
   };
 
   // Export to CSV
@@ -979,22 +1243,45 @@ export function InvoiceManagementView({
           </div>
         </div>
 
-        {/* Status Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
-          <span className="text-xs font-semibold text-slate-400 mr-2">Status:</span>
-          {["ALL", "PAID", "PARTIAL", "UNPAID", "VOID", "DRAFT"].map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                statusFilter === st
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
-              }`}
-            >
-              {st}
-            </button>
-          ))}
+        {/* Status & Category Pills */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/60 mt-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-400 mr-1.5">Status:</span>
+            {["ALL", "PAID", "PARTIAL", "UNPAID", "VOID", "DRAFT"].map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  statusFilter === st
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold text-slate-400 mr-1.5">Category:</span>
+            {[
+              { id: "ALL", label: "All Records" },
+              { id: "SALES", label: "Sales & POS Invoices" },
+              { id: "PURCHASE_PO", label: "Supplier PO / AP" },
+            ].map((tp) => (
+              <button
+                key={tp.id}
+                onClick={() => setTypeFilter(tp.id)}
+                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                  typeFilter === tp.id
+                    ? "bg-purple-600 text-white shadow-sm"
+                    : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
+                }`}
+              >
+                {tp.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -1057,12 +1344,19 @@ export function InvoiceManagementView({
 
                       {/* Invoice Number */}
                       <td className="py-3 px-4 font-bold text-blue-400 whitespace-nowrap">
-                        <button
-                          onClick={() => setViewInvoice(inv)}
-                          className="hover:underline flex items-center gap-1 text-left"
-                        >
-                          {inv.invoiceNumber}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setViewInvoice(inv)}
+                            className="hover:underline flex items-center gap-1 text-left"
+                          >
+                            {inv.invoiceNumber}
+                          </button>
+                          {inv.type === "PURCHASE_PO" && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase bg-purple-500/15 text-purple-300 border border-purple-500/30">
+                              PO / AP
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Date */}
@@ -1090,9 +1384,16 @@ export function InvoiceManagementView({
                         {inv.creditBilled.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
 
-                      {/* Customer */}
-                      <td className="py-3 px-4 text-slate-200 font-sans whitespace-nowrap max-w-[200px] truncate">
-                        <div className="font-semibold text-white">{inv.customerName}</div>
+                      {/* Customer / Vendor */}
+                      <td className="py-3 px-4 text-slate-200 font-sans whitespace-nowrap max-w-[220px] truncate">
+                        <div className="flex items-center gap-1.5">
+                          <div className="font-semibold text-white truncate">{inv.customerName}</div>
+                          {inv.type === "PURCHASE_PO" && (
+                            <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 font-bold uppercase tracking-wide">
+                              Supplier
+                            </span>
+                          )}
+                        </div>
                         {inv.customerPhone && (
                           <div className="text-[11px] text-slate-500 font-mono">
                             {inv.customerPhone}
@@ -1659,12 +1960,16 @@ function A4InvoicePrintModal({
             </div>
 
             <div className="text-right">
-              <span className="inline-block px-3 py-1 rounded bg-slate-900 text-white text-xs font-black uppercase tracking-wider">
-                TAX INVOICE
+              <span
+                className={`inline-block px-3 py-1 rounded text-white text-xs font-black uppercase tracking-wider ${
+                  invoice.type === "PURCHASE_PO" ? "bg-purple-900" : "bg-slate-900"
+                }`}
+              >
+                {invoice.type === "PURCHASE_PO" ? "PURCHASE ORDER INVOICE" : "TAX INVOICE"}
               </span>
               <div className="mt-3 text-xs space-y-1 font-mono">
                 <div>
-                  <span className="text-slate-500">Invoice No: </span>
+                  <span className="text-slate-500">{invoice.type === "PURCHASE_PO" ? "PO / Bill No: " : "Invoice No: "}</span>
                   <span className="font-bold text-slate-900">{invoice.invoiceNumber}</span>
                 </div>
                 <div>
@@ -1693,7 +1998,7 @@ function A4InvoicePrintModal({
           <div className="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
             <div>
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                INVOICE TO (CLIENT)
+                {invoice.type === "PURCHASE_PO" ? "SUPPLIER / VENDOR DETAILS" : "INVOICE TO (CLIENT)"}
               </span>
               <h3 className="font-bold text-base text-slate-900">{invoice.customerName}</h3>
               {invoice.billingAddress && (

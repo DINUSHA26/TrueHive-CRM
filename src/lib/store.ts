@@ -197,7 +197,7 @@ export interface QuotationRecord {
 }
 
 export type InvoiceStatusType = "DRAFT" | "ISSUED" | "PAID" | "PARTIAL" | "UNPAID" | "VOID";
-export type InvoiceTypeEnum = "STANDARD" | "POS_RECEIPT" | "TAX_INVOICE" | "PROFORMA" | "CREDIT_NOTE";
+export type InvoiceTypeEnum = "STANDARD" | "POS_RECEIPT" | "TAX_INVOICE" | "PROFORMA" | "CREDIT_NOTE" | "PURCHASE_PO";
 
 export interface InvoiceItemRecord {
   id?: string;

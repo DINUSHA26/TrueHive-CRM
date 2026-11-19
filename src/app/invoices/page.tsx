@@ -12,6 +12,9 @@ export default function InvoicesPage() {
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
+  const [creditBills, setCreditBills] = useState<any[]>([]);
+  const [supplierBills, setSupplierBills] = useState<any[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<any[]>([]);
   const [selectedA4Order, setSelectedA4Order] = useState<OrderRecord | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ name: string; role: string }>({
@@ -22,10 +25,13 @@ export default function InvoicesPage() {
   const fetchData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const [oRes, pRes, cRes] = await Promise.allSettled([
+      const [oRes, pRes, cRes, cbRes, sbRes, poRes] = await Promise.allSettled([
         fetch("/api/orders"),
         fetch("/api/inventory"),
         fetch("/api/crm?view=customers"),
+        fetch("/api/credit/customer-bills"),
+        fetch("/api/credit/supplier-bills"),
+        fetch("/api/suppliers"),
       ]);
 
       if (oRes.status === "fulfilled" && oRes.value.ok) {
@@ -43,6 +49,18 @@ export default function InvoicesPage() {
         const cData = await cRes.value.json();
         if (cData.customers && Array.isArray(cData.customers)) setCustomers(cData.customers);
         else if (Array.isArray(cData)) setCustomers(cData);
+      }
+      if (cbRes.status === "fulfilled" && cbRes.value.ok) {
+        const cbData = await cbRes.value.json();
+        if (cbData.bills && Array.isArray(cbData.bills)) setCreditBills(cbData.bills);
+      }
+      if (sbRes.status === "fulfilled" && sbRes.value.ok) {
+        const sbData = await sbRes.value.json();
+        if (sbData.bills && Array.isArray(sbData.bills)) setSupplierBills(sbData.bills);
+      }
+      if (poRes.status === "fulfilled" && poRes.value.ok) {
+        const poData = await poRes.value.json();
+        if (poData.purchaseOrders && Array.isArray(poData.purchaseOrders)) setPurchaseOrders(poData.purchaseOrders);
       }
     } catch (err) {
       console.warn("Failed to load initial invoice data:", err);
@@ -82,6 +100,9 @@ export default function InvoicesPage() {
         orders={orders}
         products={products}
         customers={customers}
+        creditBills={creditBills}
+        supplierBills={supplierBills}
+        purchaseOrders={purchaseOrders}
         onRefresh={fetchData}
         onOpenA4Invoice={setSelectedA4Order}
       />
