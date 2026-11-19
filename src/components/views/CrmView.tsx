@@ -95,6 +95,27 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
   const [updating, setUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  const handleNewSale = (c: CustomerRecord) => {
+    try {
+      localStorage.setItem(
+        "truehive_pos_customer",
+        JSON.stringify({
+          id: c.id,
+          name: c.name,
+          phone: c.phone,
+          creditLimit: c.creditLimit || 0,
+          creditBalance: c.creditBalance || 0,
+          customerType: c.customerType || "Regular",
+        })
+      );
+    } catch {}
+
+    const url = `/pos?customerId=${c.id}&name=${encodeURIComponent(c.name)}&phone=${encodeURIComponent(
+      c.phone
+    )}&limit=${c.creditLimit || 0}&balance=${c.creditBalance || 0}`;
+    window.location.href = url;
+  };
+
   const handleOpenEdit = (c: CustomerRecord) => {
     setEditingCustomer(c);
     setEditName(c.name || "");
@@ -479,8 +500,8 @@ export function CrmView({ customers, onRefresh, onNavigate }: CrmViewProps) {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => onNavigate("POS_PANEL")}
-                              className="text-xs py-1 px-2.5"
+                              onClick={() => handleNewSale(c)}
+                              className="text-xs py-1 px-2.5 font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
                             >
                               New Sale
                             </Button>

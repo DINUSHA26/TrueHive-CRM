@@ -82,6 +82,16 @@ export function PosPanelView({
   const [customerPhone, setCustomerPhone] = useState("");
   const [heldBills, setHeldBills] = useState<HeldBill[]>([]);
 
+  // Linked CRM Customer (Passed from CRM "New Sale" or URL params)
+  const [linkedCustomer, setLinkedCustomer] = useState<{
+    id?: string;
+    name: string;
+    phone: string;
+    creditLimit?: number;
+    creditBalance?: number;
+    customerType?: string;
+  } | null>(null);
+
   // Fulfillment & Handover Type (Store Pickup vs Courier Delivery)
   const [fulfillmentType, setFulfillmentType] = useState<"STORE_PICKUP" | "COURIER_DELIVERY">("STORE_PICKUP");
   const [shippingAddress, setShippingAddress] = useState("");
@@ -103,6 +113,64 @@ export function PosPanelView({
   const [paymentMethod, setPaymentMethod] = useState<PosPaymentMethod>("Cash");
   const [paidAmount, setPaidAmount] = useState<string>("");
   const [checkingOut, setCheckingOut] = useState(false);
+
+  // Automatic customer linking on mount from URL parameters or localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const nameParam = params.get("name") || params.get("customerName");
+      const phoneParam = params.get("phone") || params.get("customerPhone");
+      const idParam = params.get("customerId");
+      const limitParam = params.get("limit");
+      const balanceParam = params.get("balance");
+
+      if (nameParam || phoneParam) {
+        const custObj = {
+          id: idParam || undefined,
+          name: nameParam || "Customer",
+          phone: phoneParam || "",
+          creditLimit: limitParam ? Number(limitParam) : 50000,
+          creditBalance: balanceParam ? Number(balanceParam) : 0,
+        };
+        setLinkedCustomer(custObj);
+        setCustomerName(custObj.name);
+        setCustomerPhone(custObj.phone);
+        return;
+      }
+
+      try {
+        const saved = localStorage.getItem("truehive_pos_customer");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && (parsed.name || parsed.phone)) {
+            setLinkedCustomer(parsed);
+            setCustomerName(parsed.name || "");
+            setCustomerPhone(parsed.phone || "");
+          }
+        }
+      } catch {}
+    }
+  }, []);
+
+  // Fulfillment change handler ensuring COD is ONLY available for courier delivery
+  const handleFulfillmentChange = (mode: "STORE_PICKUP" | "COURIER_DELIVERY") => {
+    setFulfillmentType(mode);
+    if (mode === "STORE_PICKUP") {
+      if (paymentMethod === "COD") {
+        setPaymentMethod("Cash");
+      }
+    } else {
+      if (paymentMethod === "Cash") {
+        setPaymentMethod("COD");
+      }
+    }
+  };
+
+  // Payment methods: COD only for courier delivery, Cash only for store pickup
+  const availablePaymentMethods: PosPaymentMethod[] =
+    fulfillmentType === "STORE_PICKUP"
+      ? ["Cash", "Card", "QR Pay", "Online Bank", "Credit"]
+      : ["COD", "Card", "QR Pay", "Online Bank", "Credit"];
 
   // Recent Orders State & View Modal
   const [recentOrders, setRecentOrders] = useState<OrderRecord[]>(initialOrders || []);
@@ -239,7 +307,9 @@ export function PosPanelView({
   const grandTotal = isFreeValue ? 0 : calculatedGrandTotal;
 
   const paidNum = paidAmount === "" ? 0 : Number(paidAmount);
-  const balance = Math.max(0, paidNum - grandTotal);
+  const isCredit = paymentMethod === "Credit";
+  const creditDue = isCredit ? Math.max(0, grandTotal - paidNum) : 0;
+  const balance = isCredit ? 0 : Math.max(0, paidNum - grandTotal);
 
   // Hold / Resume bill
   const handleHoldBill = () => {
@@ -360,6 +430,10 @@ export function PosPanelView({
         setCart([]);
         setCustomerName("");
         setCustomerPhone("");
+        setLinkedCustomer(null);
+        try {
+          localStorage.removeItem("truehive_pos_customer");
+        } catch {}
         setFulfillmentType("STORE_PICKUP");
         setShippingAddress("");
         setDeliveryCity("");
@@ -676,6 +750,47 @@ export function PosPanelView({
             </div>
           </div>
 
+          {/* Linked Customer Banner from CRM */}
+          {linkedCustomer && (
+            <div className="p-3 rounded-2xl bg-gradient-to-r from-blue-950/60 to-indigo-950/40 border border-blue-500/40 flex items-center justify-between gap-3 animate-in fade-in duration-150">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/30 text-blue-400 font-bold flex items-center justify-center text-xs">
+                  {linkedCustomer.name.charAt(0) || "C"}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-xs">{linkedCustomer.name}</span>
+                    <Badge variant="primary" size="sm">
+                      {linkedCustomer.customerType || "CRM Client"}
+                    </Badge>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                    Tel: {linkedCustomer.phone}
+                    {linkedCustomer.creditLimit ? (
+                      <span className="text-amber-400 ml-2 font-semibold">
+                        • Credit Limit: Rs. {linkedCustomer.creditLimit.toLocaleString()} (Bal: Rs. {(linkedCustomer.creditBalance || 0).toLocaleString()})
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setLinkedCustomer(null);
+                  setCustomerName("");
+                  setCustomerPhone("");
+                  try {
+                    localStorage.removeItem("truehive_pos_customer");
+                  } catch {}
+                }}
+                className="text-[11px] text-slate-400 hover:text-rose-400 px-2.5 py-1 rounded-lg border border-slate-800 hover:border-rose-500/40 transition"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+
           {/* Customer Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -712,7 +827,7 @@ export function PosPanelView({
               <div className="inline-flex p-1 rounded-xl bg-slate-900 border border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setFulfillmentType("STORE_PICKUP")}
+                  onClick={() => handleFulfillmentChange("STORE_PICKUP")}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                     fulfillmentType === "STORE_PICKUP"
                       ? "bg-emerald-600 text-white shadow-sm"
@@ -724,7 +839,7 @@ export function PosPanelView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFulfillmentType("COURIER_DELIVERY")}
+                  onClick={() => handleFulfillmentChange("COURIER_DELIVERY")}
                   className={`px-3 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition ${
                     fulfillmentType === "COURIER_DELIVERY"
                       ? "bg-blue-600 text-white shadow-sm"
@@ -1011,45 +1126,70 @@ export function PosPanelView({
               />
             </div>
 
-            {/* Balance */}
-            <div className="flex items-center justify-between pt-1">
-              <span className="font-semibold text-blue-400">Balance</span>
-              <span className="text-base font-black text-blue-400">
-                Rs.{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </span>
-            </div>
+            {/* Balance or Credit Due Amount */}
+            {isCredit ? (
+              <div className="flex items-center justify-between pt-1.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                <div>
+                  <span className="font-bold text-amber-400 block text-xs">Credit Payable / Due</span>
+                  {linkedCustomer && linkedCustomer.creditLimit ? (
+                    <span className="text-[10px] text-amber-300/80">
+                      Avail Credit: Rs. {Math.max(0, (linkedCustomer.creditLimit || 50000) - (linkedCustomer.creditBalance || 0)).toLocaleString()}
+                    </span>
+                  ) : null}
+                </div>
+                <span className="text-base font-black text-amber-400">
+                  Rs.{creditDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between pt-1">
+                <span className="font-semibold text-blue-400">Balance</span>
+                <span className="text-base font-black text-blue-400">
+                  Rs.{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Payment Method Radio Selection Cards (Image 2) */}
           <div className="space-y-2 pt-2 border-t border-slate-800">
-            <p className="text-xs font-semibold text-slate-400">Payment Method</p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-              {(["Cash", "Card", "QR Pay", "Online Bank", "Credit", "COD"] as PosPaymentMethod[]).map(
-                (method) => {
-                  const isSelected = paymentMethod === method;
-                  return (
-                    <button
-                      key={method}
-                      type="button"
-                      onClick={() => setPaymentMethod(method)}
-                      className={`p-2.5 rounded-xl border text-center transition flex items-center justify-center gap-2 ${
-                        isSelected
-                          ? "border-blue-500 bg-blue-600/10 text-white font-bold"
-                          : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white hover:border-slate-700"
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-400">Payment Method</p>
+              {fulfillmentType === "STORE_PICKUP" ? (
+                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
+                  <Store className="w-3 h-3" /> Store Counter
+                </span>
+              ) : (
+                <span className="text-[10px] text-blue-400 font-mono flex items-center gap-1">
+                  <Truck className="w-3 h-3" /> Courier Mode (COD Active)
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {availablePaymentMethods.map((method) => {
+                const isSelected = paymentMethod === method;
+                return (
+                  <button
+                    key={method}
+                    type="button"
+                    onClick={() => setPaymentMethod(method)}
+                    className={`p-2.5 rounded-xl border text-center transition flex items-center justify-center gap-2 ${
+                      isSelected
+                        ? "border-blue-500 bg-blue-600/10 text-white font-bold shadow-sm"
+                        : "border-slate-800 bg-slate-950 text-slate-400 hover:text-white hover:border-slate-700"
+                    }`}
+                  >
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                        isSelected ? "border-blue-500" : "border-slate-600"
                       }`}
                     >
-                      <span
-                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
-                          isSelected ? "border-blue-500" : "border-slate-600"
-                        }`}
-                      >
-                        {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                      </span>
-                      <span className="text-xs">{method}</span>
-                    </button>
-                  );
-                }
-              )}
+                      {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                    </span>
+                    <span className="text-xs">{method}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1148,9 +1288,9 @@ export function PosPanelView({
         </div>
       </div>
 
-      {/* INVOICE DETAILS MODAL (Customizable Thermal / A4 Receipt Layout) */}
+      {/* INVOICE DETAILS MODAL (Customizable Thermal / A4 Receipt Layout with Fixed Cut Button & Header) */}
       {viewingInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-2 sm:p-4 overflow-hidden">
           <div
             className={`relative w-full ${
               receiptSettings.paperWidth === "58mm"
@@ -1158,17 +1298,17 @@ export function PosPanelView({
                 : receiptSettings.paperWidth === "A4"
                 ? "max-w-2xl"
                 : "max-w-md"
-            } bg-white text-slate-950 rounded-3xl shadow-2xl p-6 sm:p-7 space-y-4 my-8 animate-in fade-in zoom-in-95 duration-200`}
+            } max-h-[92vh] flex flex-col bg-white text-slate-950 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
           >
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+            {/* Modal Fixed Header - Cut (X) button ALWAYS visible at top */}
+            <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900">Invoice Details</h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">
                   {receiptSettings.paperWidth}
                 </span>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => setReceiptModalOpen(true)}
@@ -1179,245 +1319,256 @@ export function PosPanelView({
                 </button>
                 <button
                   onClick={() => setViewingInvoice(null)}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition"
+                  title="Close receipt preview"
+                  className="w-8 h-8 rounded-full bg-slate-100 hover:bg-rose-100 text-slate-600 hover:text-rose-600 flex items-center justify-center transition"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
 
-            {/* Printable Thermal Receipt Card */}
-            <div
-              id="pos-thermal-receipt"
-              className={`space-y-3 font-mono text-slate-900 ${
-                receiptSettings.fontSize === "compact" ? "text-[11px]" : "text-xs"
-              }`}
-            >
-              {/* Business Name & Header */}
-              <div className="text-center py-1">
-                <h2 className="text-2xl font-black tracking-tight text-slate-950">
-                  {receiptSettings.businessName || businessName}
-                </h2>
-                {receiptSettings.subHeader && (
-                  <p className="text-[11px] text-slate-600 font-sans">{receiptSettings.subHeader}</p>
-                )}
-                {receiptSettings.address && (
-                  <p className="text-[10px] text-slate-500 mt-0.5">{receiptSettings.address}</p>
-                )}
-                {receiptSettings.phone && (
-                  <p className="text-[10px] text-slate-500">Tel: {receiptSettings.phone}</p>
-                )}
-                {receiptSettings.vatNumber && (
-                  <p className="text-[10px] text-slate-500 font-bold">VAT No: {receiptSettings.vatNumber}</p>
-                )}
-              </div>
-
-              <div className="border-t border-dashed border-slate-400 my-2" />
-
-              {/* Meta Info */}
-              <div className="space-y-1 text-[11px]">
-                <div className="flex justify-between">
-                  <span>
-                    Invoice : <strong className="font-bold">{viewingInvoice.orderNumber}</strong>
-                  </span>
-                  <span>
-                    {new Date(viewingInvoice.createdAt).toLocaleDateString("en-CA")}{" "}
-                    {new Date(viewingInvoice.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
+            {/* Scrollable Receipt Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 custom-scrollbar">
+              <div
+                id="pos-thermal-receipt"
+                className={`space-y-3 font-mono text-slate-900 ${
+                  receiptSettings.fontSize === "compact" ? "text-[11px]" : "text-xs"
+                }`}
+              >
+                {/* Business Name & Header */}
+                <div className="text-center py-1">
+                  <h2 className="text-2xl font-black tracking-tight text-slate-950">
+                    {receiptSettings.businessName || businessName}
+                  </h2>
+                  {receiptSettings.subHeader && (
+                    <p className="text-[11px] text-slate-600 font-sans">{receiptSettings.subHeader}</p>
+                  )}
+                  {receiptSettings.address && (
+                    <p className="text-[10px] text-slate-500 mt-0.5">{receiptSettings.address}</p>
+                  )}
+                  {receiptSettings.phone && (
+                    <p className="text-[10px] text-slate-500">Tel: {receiptSettings.phone}</p>
+                  )}
+                  {receiptSettings.vatNumber && (
+                    <p className="text-[10px] text-slate-500 font-bold">VAT No: {receiptSettings.vatNumber}</p>
+                  )}
                 </div>
-                <div className="flex justify-between">
-                  <span>
-                    Payment : <strong>{viewingInvoice.paymentMethod}</strong>
-                  </span>
-                  <span>
-                    Mode :{" "}
-                    <strong>
-                      {viewingInvoice.fulfillmentType === "COURIER_DELIVERY"
-                        ? `Courier (${viewingInvoice.courierPartner || "Standard"})`
-                        : "Store Pickup"}
-                    </strong>
-                  </span>
-                </div>
-                {viewingInvoice.deliveryCity && (
-                  <div className="text-[10px] text-slate-600">
-                    Ship to: {viewingInvoice.deliveryCity}{" "}
-                    {viewingInvoice.shippingAddress ? `(${viewingInvoice.shippingAddress})` : ""}
+
+                <div className="border-t border-dashed border-slate-400 my-2" />
+
+                {/* Meta Info */}
+                <div className="space-y-1 text-[11px]">
+                  <div className="flex justify-between">
+                    <span>
+                      Invoice : <strong className="font-bold">{viewingInvoice.orderNumber}</strong>
+                    </span>
+                    <span>
+                      {new Date(viewingInvoice.createdAt).toLocaleDateString("en-CA")}{" "}
+                      {new Date(viewingInvoice.createdAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
                   </div>
-                )}
-              </div>
+                  <div className="flex justify-between">
+                    <span>
+                      Payment : <strong>{viewingInvoice.paymentMethod}</strong>
+                    </span>
+                    <span>
+                      Mode :{" "}
+                      <strong>
+                        {viewingInvoice.fulfillmentType === "COURIER_DELIVERY"
+                          ? `Courier (${viewingInvoice.courierPartner || "Standard"})`
+                          : "Store Pickup"}
+                      </strong>
+                    </span>
+                  </div>
+                  {viewingInvoice.deliveryCity && (
+                    <div className="text-[10px] text-slate-600">
+                      Ship to: {viewingInvoice.deliveryCity}{" "}
+                      {viewingInvoice.shippingAddress ? `(${viewingInvoice.shippingAddress})` : ""}
+                    </div>
+                  )}
+                </div>
 
-              <div className="border-t border-dashed border-slate-400 my-2" />
+                <div className="border-t border-dashed border-slate-400 my-2" />
 
-              {/* Items Table */}
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="font-bold text-slate-950 border-b border-dashed border-slate-400 pb-1">
-                    <th className="pb-1">PRODUCT</th>
-                    <th className="pb-1 text-center">QTY</th>
-                    <th className="pb-1 text-right">TOTAL</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-dotted divide-slate-200">
-                  {viewingInvoice.items?.map((item: any) => (
-                    <tr key={item.index || item.name} className="py-2">
-                      <td className="py-1.5 pr-2">
-                        <p className="font-bold text-slate-950">
-                          {item.index}. {item.name}
-                        </p>
-                        {receiptSettings.showSku && item.sku && (
-                          <p className="text-[10px] text-slate-500 font-mono">{item.sku}</p>
-                        )}
-                        {receiptSettings.showDiscounts && (item.offers > 0 || item.unitOffer > 0) && (
-                          <p className="text-[10px] text-rose-600 font-bold">
-                            Offer: -Rs.
-                            {(item.offers || item.unitOffer * item.quantity).toLocaleString()}
-                          </p>
-                        )}
-                      </td>
-                      <td className="py-1.5 text-center whitespace-nowrap text-slate-800">
-                        {item.quantity} QTY
-                      </td>
-                      <td className="py-1.5 text-right font-bold text-slate-950 whitespace-nowrap">
-                        Rs.{item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                      </td>
+                {/* Items Table */}
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="font-bold text-slate-950 border-b border-dashed border-slate-400 pb-1">
+                      <th className="pb-1">PRODUCT</th>
+                      <th className="pb-1 text-center">QTY</th>
+                      <th className="pb-1 text-right">TOTAL</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-dotted divide-slate-200">
+                    {viewingInvoice.items?.map((item: any) => (
+                      <tr key={item.index || item.name} className="py-2">
+                        <td className="py-1.5 pr-2">
+                          <p className="font-bold text-slate-950">
+                            {item.index}. {item.name}
+                          </p>
+                          {receiptSettings.showSku && item.sku && (
+                            <p className="text-[10px] text-slate-500 font-mono">{item.sku}</p>
+                          )}
+                          {receiptSettings.showDiscounts && (item.offers > 0 || item.unitOffer > 0) && (
+                            <p className="text-[10px] text-rose-600 font-bold">
+                              Offer: -Rs.
+                              {(item.offers || item.unitOffer * item.quantity).toLocaleString()}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-1.5 text-center whitespace-nowrap text-slate-800">
+                          {item.quantity} QTY
+                        </td>
+                        <td className="py-1.5 text-right font-bold text-slate-950 whitespace-nowrap">
+                          Rs.{item.totalPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
 
-              <div className="border-t border-dashed border-slate-400 my-2" />
+                <div className="border-t border-dashed border-slate-400 my-2" />
 
-              {/* Breakdown */}
-              <div className="space-y-1 text-xs pt-1">
-                <div className="flex justify-between">
-                  <span>Sub total :</span>
-                  <span className="font-bold">
-                    Rs.{viewingInvoice.subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                {viewingInvoice.totalDiscount > 0 && (
-                  <div className="flex justify-between text-rose-600 font-semibold">
-                    <span>Discount total (Rs.) :</span>
-                    <span>
-                      -Rs.
-                      {viewingInvoice.totalDiscount?.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                )}
-                {viewingInvoice.vat > 0 && (
+                {/* Breakdown */}
+                <div className="space-y-1 text-xs pt-1">
                   <div className="flex justify-between">
-                    <span>VAT :</span>
-                    <span>
-                      Rs.{viewingInvoice.vat?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    <span>Sub total :</span>
+                    <span className="font-bold">
+                      Rs.{viewingInvoice.subtotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </span>
                   </div>
-                )}
-                {viewingInvoice.serviceCharges > 0 && (
-                  <div className="flex justify-between">
-                    <span>Service Charge :</span>
-                    <span>
-                      Rs.
-                      {viewingInvoice.serviceCharges?.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                )}
-                {viewingInvoice.deliveryCharges > 0 && (
-                  <div className="flex justify-between">
-                    <span>Delivery Fee :</span>
-                    <span>
-                      Rs.
-                      {viewingInvoice.deliveryCharges?.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between font-black text-sm pt-1 border-t border-slate-300">
-                  <span>Total :</span>
-                  <span>
-                    Rs.{viewingInvoice.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Paid amount :</span>
-                  <span>
-                    Rs.{viewingInvoice.paidAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="flex justify-between text-blue-700 font-bold">
-                  <span>Balance :</span>
-                  <span>
-                    Rs.{viewingInvoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-
-              {/* Barcode & QR Code Section */}
-              {(receiptSettings.showBarcode || receiptSettings.showQrCode) && (
-                <div className="pt-2 text-center flex flex-col items-center justify-center gap-1.5 border-t border-dashed border-slate-400">
-                  {receiptSettings.showBarcode && viewingInvoice.orderNumber && (
-                    <div className="scale-95 origin-center">
-                      <BarcodeDisplay
-                        value={viewingInvoice.orderNumber}
-                        height={
-                          receiptSettings.barcodeHeight === "small"
-                            ? 30
-                            : receiptSettings.barcodeHeight === "large"
-                            ? 65
-                            : 45
-                        }
-                        width={1.4}
-                        fontSize={10}
-                      />
+                  {viewingInvoice.totalDiscount > 0 && (
+                    <div className="flex justify-between text-rose-600 font-semibold">
+                      <span>Discount total (Rs.) :</span>
+                      <span>
+                        -Rs.
+                        {viewingInvoice.totalDiscount?.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
                     </div>
                   )}
+                  {viewingInvoice.vat > 0 && (
+                    <div className="flex justify-between">
+                      <span>VAT :</span>
+                      <span>
+                        Rs.{viewingInvoice.vat?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+                  {viewingInvoice.serviceCharges > 0 && (
+                    <div className="flex justify-between">
+                      <span>Service Charge :</span>
+                      <span>
+                        Rs.
+                        {viewingInvoice.serviceCharges?.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  {viewingInvoice.deliveryCharges > 0 && (
+                    <div className="flex justify-between">
+                      <span>Delivery Fee :</span>
+                      <span>
+                        Rs.
+                        {viewingInvoice.deliveryCharges?.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-black text-sm pt-1 border-t border-slate-300">
+                    <span>Total :</span>
+                    <span>
+                      Rs.{viewingInvoice.grandTotal?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Paid amount :</span>
+                    <span>
+                      Rs.{viewingInvoice.paidAmount?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-blue-700 font-bold">
+                    <span>Balance :</span>
+                    <span>
+                      Rs.{viewingInvoice.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
 
-                  {receiptSettings.showQrCode && (
-                    <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-sans">
-                      <QrCode className="w-3.5 h-3.5 text-slate-700" />
-                      <span>Scan to verify order #{viewingInvoice.orderNumber}</span>
+                {/* Barcode & QR Code Section */}
+                {(receiptSettings.showBarcode || receiptSettings.showQrCode) && (
+                  <div className="pt-2 text-center flex flex-col items-center justify-center gap-1.5 border-t border-dashed border-slate-400">
+                    {receiptSettings.showBarcode && viewingInvoice.orderNumber && (
+                      <div className="scale-95 origin-center">
+                        <BarcodeDisplay
+                          value={viewingInvoice.orderNumber}
+                          height={
+                            receiptSettings.barcodeHeight === "small"
+                              ? 30
+                              : receiptSettings.barcodeHeight === "large"
+                              ? 65
+                              : 45
+                          }
+                          width={1.4}
+                          fontSize={10}
+                        />
+                      </div>
+                    )}
+
+                    {receiptSettings.showQrCode && (
+                      <div className="flex items-center gap-1.5 text-[9px] text-slate-500 font-sans">
+                        <QrCode className="w-3.5 h-3.5 text-slate-700" />
+                        <span>Scan to verify order #{viewingInvoice.orderNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="border-t border-dashed border-slate-400 my-2" />
+
+                {/* Footer Note & Return Policy */}
+                <div className="text-center py-1 space-y-1">
+                  <div className="text-slate-900 font-bold text-xs">
+                    {receiptSettings.footerNote || "Thank you! Come again!"}
+                  </div>
+                  {receiptSettings.returnPolicy && (
+                    <div className="text-[10px] text-slate-500 italic">
+                      {receiptSettings.returnPolicy}
                     </div>
                   )}
                 </div>
-              )}
-
-              <div className="border-t border-dashed border-slate-400 my-2" />
-
-              {/* Footer Note & Return Policy */}
-              <div className="text-center py-1 space-y-1">
-                <div className="text-slate-900 font-bold text-xs">
-                  {receiptSettings.footerNote || "Thank you! Come again!"}
-                </div>
-                {receiptSettings.returnPolicy && (
-                  <div className="text-[10px] text-slate-500 italic">
-                    {receiptSettings.returnPolicy}
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Print Button */}
-            <div className="pt-2 flex items-center gap-2">
+            {/* Modal Fixed Footer - Action buttons ALWAYS visible at bottom */}
+            <div className="px-5 py-3 border-t border-slate-200 flex items-center gap-2 shrink-0 bg-slate-50">
               <Button
                 variant="outline"
-                size="lg"
-                className="flex-1 rounded-2xl text-xs"
+                size="sm"
+                className="rounded-xl text-xs py-2"
                 onClick={() => setReceiptModalOpen(true)}
-                leftIcon={<Sliders className="w-4 h-4 text-slate-600" />}
+                leftIcon={<Sliders className="w-3.5 h-3.5 text-slate-600" />}
               >
                 Format
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs py-2 text-slate-600 hover:text-rose-600 hover:border-rose-300"
+                onClick={() => setViewingInvoice(null)}
+              >
+                Close
+              </Button>
+              <Button
                 variant="primary"
-                size="lg"
-                className="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-2xl flex items-center justify-center gap-2"
+                size="sm"
+                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-2 rounded-xl flex items-center justify-center gap-2 shadow-sm"
                 onClick={() => window.print()}
               >
                 <Printer className="w-4 h-4" />

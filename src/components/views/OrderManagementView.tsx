@@ -32,6 +32,7 @@ import {
   X,
   CreditCard,
   Download,
+  Store,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -222,6 +223,23 @@ export function OrderManagementView({
       alert("Error updating order status.");
     } finally {
       setUpdatingId(null);
+    }
+  };
+
+  // Handle Toggle Payment Status (e.g. Mark Cash/Card as PAID)
+  const handleTogglePaymentStatus = async (order: OrderRecord) => {
+    const newPaymentStatus = order.paymentStatus === "PAID" ? "UNPAID" : "PAID";
+    try {
+      const res = await fetch(`/api/orders/${order.id}/payment-status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentStatus: newPaymentStatus }),
+      });
+      if (res.ok) {
+        onRefresh();
+      }
+    } catch (err) {
+      console.error("Toggle payment status error:", err);
     }
   };
 
@@ -690,6 +708,11 @@ export function OrderManagementView({
                     const isPos = order.source === "POS_TERMINAL";
                     const isCod = order.paymentMethod === "COD";
                     const isBankTransfer = order.paymentMethod === "BANK_TRANSFER";
+                    const isStorePickup =
+                      order.courierPartner === "STORE_PICKUP" ||
+                      order.deliveryCity === "In-Store" ||
+                      order.shippingAddress?.toLowerCase().includes("store pickup") ||
+                      order.shippingAddress?.toLowerCase().includes("in-store");
 
                     return (
                       <TableRow key={order.id}>
@@ -767,22 +790,32 @@ export function OrderManagementView({
                               }`}>
                                 {order.paymentMethod === "SPLIT" ? "CREDIT" : order.paymentMethod}
                               </span>
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                                order.paymentStatus === "PAID"
-                                  ? "bg-emerald-500/20 text-emerald-400"
-                                  : order.paymentStatus === "VERIFYING_SLIP"
-                                  ? "bg-amber-500/20 text-amber-400"
-                                  : "bg-rose-500/20 text-rose-400"
-                              }`}>
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePaymentStatus(order)}
+                                title="Click to toggle Paid/Unpaid"
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-semibold cursor-pointer transition ${
+                                  order.paymentStatus === "PAID"
+                                    ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                                    : order.paymentStatus === "VERIFYING_SLIP"
+                                    ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                                    : "bg-rose-500/20 text-rose-400 hover:bg-rose-500/30"
+                                }`}
+                              >
                                 {order.paymentStatus}
-                              </span>
+                              </button>
                             </div>
                           </div>
                         </TableCell>
 
                         {/* Courier / Waybill */}
                         <TableCell>
-                          {order.trackingNumber ? (
+                          {isStorePickup ? (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-semibold text-xs whitespace-nowrap">
+                              <Store className="w-3.5 h-3.5" />
+                              Store Pickup
+                            </div>
+                          ) : order.trackingNumber ? (
                             <div className="space-y-0.5">
                               <p className="font-mono text-xs text-white font-bold flex items-center gap-1">
                                 <Truck className="w-3.5 h-3.5 text-blue-400" />
