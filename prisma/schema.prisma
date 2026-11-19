@@ -101,6 +101,7 @@ model Customer {
   creditBills    CustomerCreditBill[]
   creditPayments CustomerCreditPayment[]
   quotations     Quotation[]
+  invoices       Invoice[]
 }
 
 model Lead {
@@ -240,6 +241,7 @@ model Product {
   orderItems     OrderItem[]
   stockMovements StockMovement[]
   quotationItems QuotationItem[]
+  invoiceItems   InvoiceItem[]
 }
 
 model ProductVariant {
@@ -456,6 +458,7 @@ model Order {
   items            OrderItem[]
   statusHistory    OrderStatusHistory[]
   quotations       Quotation[]
+  invoice          Invoice?
 
   @@index([status])
   @@index([source])
@@ -810,5 +813,97 @@ model QuotationItem {
 
   @@index([quotationId])
 }
+
+// ==========================================
+// 11. CENTRAL INVOICE ENGINE (ERP Report 19 Nov 2026)
+// ==========================================
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIAL
+  UNPAID
+  VOID
+}
+
+enum InvoiceType {
+  STANDARD
+  POS_RECEIPT
+  TAX_INVOICE
+  PROFORMA
+  CREDIT_NOTE
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  invoiceNumber   String        @unique // e.g. "INV-858000"
+  type            InvoiceType   @default(STANDARD)
+  status          InvoiceStatus @default(ISSUED)
+  issuedAt        DateTime      @default(now())
+  dueDate         DateTime?
+
+  // Sources & Relations
+  orderId         String?       @unique
+  order           Order?        @relation(fields: [orderId], references: [id])
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  quotationId     String?
+
+  // Immutable Snapshots
+  customerName    String
+  customerPhone   String?
+  customerEmail   String?
+  billingAddress  String?
+
+  // Financial Breakdown
+  currency        String        @default("LKR")
+  subtotal        Float         @default(0)
+  discountAmount  Float         @default(0) // Total offers/discounts
+  taxAmount       Float         @default(0)
+  deliveryFee     Float         @default(0)
+  totalAmount     Float         @default(0)
+  paidAmount      Float         @default(0)
+  creditBilled    Float         @default(0) // Amount charged to Customer AR Credit
+  balance         Float         @default(0)
+  returnValue     Float         @default(0) // Return value / credit notes
+
+  // Payment Arrangement
+  paymentMethod   String        @default("CASH") // CASH, CARD, BANK_TRANSFER, CREDIT, COD
+  paymentStatus   String        @default("PAID")
+
+  notes           String?
+  voidReason      String?
+  voidedAt        DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items           InvoiceItem[]
+
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([issuedAt])
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  productId   String?
+  sku         String?
+  description String
+  unit        String   @default("pcs")
+  quantity    Float    @default(1)
+  unitPrice   Float    @default(0)
+  discount    Float    @default(0)
+  taxRate     Float    @default(0)
+  totalPrice  Float    @default(0)
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id])
+
+  @@index([invoiceId])
+}
+
 
 

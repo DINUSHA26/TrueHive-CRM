@@ -23,6 +23,7 @@ import {
   CreditCard,
   FileSpreadsheet,
   FileText,
+  Receipt,
 } from "lucide-react";
 
 export type NavKey =
@@ -38,6 +39,7 @@ export type NavKey =
   | "QUOTATIONS"
   | "SUPPLIER_MANAGEMENT"
   | "SUPPLIER_LEDGER"
+  | "INVOICES"
   | "CASH_FLOW"
   | "REPORTS"
   | "SETTINGS";
@@ -135,6 +137,11 @@ export const NAV_SECTIONS: NavSection[] = [
     title: "FINANCE & ANALYTICS",
     items: [
       {
+        key: "INVOICES",
+        label: "Invoices",
+        icon: Receipt,
+      },
+      {
         key: "CASH_FLOW",
         label: "Cash Flow",
         icon: Wallet,
@@ -171,6 +178,7 @@ export const NAV_ROUTES: Record<NavKey, string> = {
   QUOTATIONS: "/quotations",
   SUPPLIER_MANAGEMENT: "/suppliers",
   SUPPLIER_LEDGER: "/supplier-ledger",
+  INVOICES: "/invoices",
   CASH_FLOW: "/cashflow",
   REPORTS: "/reports",
   SETTINGS: "/settings",

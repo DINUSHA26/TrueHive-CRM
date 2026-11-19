@@ -196,6 +196,61 @@ export interface QuotationRecord {
   updatedAt?: string;
 }
 
+export type InvoiceStatusType = "DRAFT" | "ISSUED" | "PAID" | "PARTIAL" | "UNPAID" | "VOID";
+export type InvoiceTypeEnum = "STANDARD" | "POS_RECEIPT" | "TAX_INVOICE" | "PROFORMA" | "CREDIT_NOTE";
+
+export interface InvoiceItemRecord {
+  id?: string;
+  invoiceId?: string;
+  productId?: string;
+  sku?: string;
+  description: string;
+  unit?: string;
+  quantity: number;
+  unitPrice: number;
+  discount?: number;
+  taxRate?: number;
+  totalPrice: number;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  invoiceNumber: string;
+  type: InvoiceTypeEnum;
+  status: InvoiceStatusType;
+  issuedAt: string;
+  date?: string;
+  time?: string;
+  dueDate?: string;
+  orderId?: string;
+  quotationId?: string;
+  customerId?: string;
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  billingAddress?: string;
+  currency: string;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  deliveryFee: number;
+  totalAmount: number;
+  paidAmount: number;
+  creditBilled: number;
+  balance: number;
+  returnValue: number;
+  paymentMethod?: string;
+  paymentStatus?: string;
+  notes?: string;
+  terms?: string;
+  isVoided?: boolean;
+  voidReason?: string;
+  voidedAt?: string;
+  items: InvoiceItemRecord[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
 const globalState = globalThis as unknown as {
   trueHiveStore?: {
     ingredients: IngredientItem[];

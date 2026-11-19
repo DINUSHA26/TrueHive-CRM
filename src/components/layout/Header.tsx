@@ -42,6 +42,7 @@ const NAV_TITLES: Record<NavKey, { category: string; title: string }> = {
   QUOTATIONS: { category: "SALES & OPERATIONS", title: "Quotations & Invoice Estimations" },
   SUPPLIER_MANAGEMENT: { category: "SALES & OPERATIONS", title: "Suppliers, PO & GRN" },
   SUPPLIER_LEDGER: { category: "SALES & OPERATIONS", title: "Supplier Ledger & Purchases (AP)" },
+  INVOICES: { category: "FINANCE & ANALYTICS", title: "Invoice Management & Billing Engine" },
   CASH_FLOW: { category: "FINANCE & ANALYTICS", title: "Cash Flow & Financial Ledger" },
   REPORTS: { category: "FINANCE & ANALYTICS", title: "Executive Reports & Google Docs" },
   SETTINGS: { category: "ADMINISTRATION", title: "System Settings & RBAC Roles" },

@@ -18,6 +18,7 @@ import { SettingsView } from "@/components/views/SettingsView";
 import { CustomerCreditView } from "@/components/views/CustomerCreditView";
 import { SupplierLedgerView } from "@/components/views/SupplierLedgerView";
 import { QuotationsView } from "@/components/views/QuotationsView";
+import { InvoiceManagementView } from "@/components/views/InvoiceManagementView";
 import { OfficialA4InvoiceModal } from "@/components/OfficialA4InvoiceModal";
 import type {
   ProductItem,
@@ -322,6 +323,16 @@ export default function TrueHiveWorkspace() {
           ingredients={ingredients}
           onRefresh={fetchAllData}
           onNavigate={setActiveNav}
+        />
+      )}
+
+      {activeNav === "INVOICES" && (
+        <InvoiceManagementView
+          orders={orders}
+          products={products}
+          customers={customers}
+          onRefresh={fetchAllData}
+          onOpenA4Invoice={setSelectedA4Order}
         />
       )}
 
