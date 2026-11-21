@@ -25,171 +25,274 @@ interface ProductKnowledgeModalProps {
   onSuccess: () => void;
 }
 
+const OFFICIAL_KB_VERSION = "truehive-official-v2";
+
 const DEFAULT_ENGLISH_KB_BY_SKU: Record<string, any> = {
   "TH-PRD-6068": {
-    tagline: "Cold-Pressed Black Seed Oil (Nigella Sativa) | Daily Immune & Cellular Support",
+    version: OFFICIAL_KB_VERSION,
+    tagline:
+      "EverYoung Protect — Cold-Pressed Black Seed Oil (Nigella Sativa) | Daily Support (4.7★ | 1,150+ Reviews)",
     howToUse:
-      "Take a few drops directly under the tongue or mix with warm water before morning or evening meals. For best results and smoother taste, mix with 1 teaspoon of TrueHive Pure Ceylon Honey.",
-    servings: "2.5 ml - 5 ml (1/2 to 1 teaspoon), once or twice daily",
-    bestTimeToUse: "Morning on an empty stomach or 30 minutes before bedtime",
-    storage: "Store in a cool, dry place away from direct sunlight.",
+      "SUGGESTED USE: Take 1 serving (1 ml / approx. 30 drops) using the syringe provided, preferably on an empty stomach in the morning.\nMIX OR DIRECT: Take directly or mix with lukewarm water and a spoonful of TrueHive Honey to soften the taste.\nROUTINE: Take every morning as part of your daily wellness routine.",
+    servings:
+      "150 Servings per 100 ml bottle | Serving Size: 1 ml (Approx. 30 Drops = 1000 mg Black Seed Oil & 10 mg Thymoquinone)",
+    bestTimeToUse: "Morning on an empty stomach as part of your daily routine",
+    storage:
+      "Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken.",
     ingredients:
-      "100% Pure Virgin Cold-Pressed Nigella Sativa (Black Seed Oil) - Unrefined, no heat, no chemicals, solvent-free.",
-    mfgDate: "2026-01-15",
-    expDate: "2028-01-15",
-    shelfLife: "24 Months (2 Years)",
+      "100% pure cold-pressed Nigella sativa (Black Seed) oil, extracted without heat or chemical solvents to retain natural Thymoquinone.\nActive Composition per 1 ml Serving (Approx. 30 Drops): Black Seed Oil (Nigella sativa) 1000 mg, Thymoquinone (TQ) 10 mg.",
+    mfgDate: "2026-06-19",
+    expDate: "2028-06-19",
+    shelfLife: "24 Months (Unopened) / 1–3 Months after opening",
     precautions:
-      "Consult a physician before use if pregnant or nursing. Keep out of reach of children.",
+      "Consult your doctor or pharmacist before use if you are pregnant, breastfeeding, taking medication or have a medical condition. Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken. Protect is a wellness product, not a medicine, and is intended to complement a balanced diet and healthy lifestyle.",
     pairings:
-      "Pairs best with TrueHive Pure Ceylon Honey (100ml) — combining them boosts nutrient absorption by 3x and balances the natural earthy taste.",
+      "Mix with a spoonful of TrueHive Honey to soften the taste. Also available in the EverYoung Protect Bundle (Includes Honey + Protect + Sleep for LKR 12,000 — Save LKR 500 off LKR 12,500).",
     benefits: [
-      "Boosts natural immune system and daily cellular defense",
-      "Rich in active Thymoquinone to reduce internal inflammation and oxidative stress",
-      "Supports healthy blood sugar and cholesterol levels naturally",
-      "Relieves respiratory issues, seasonal allergies, sinus, and asthma symptoms",
-      "Promotes healthy skin clarity and hair vitality",
+      "100% Cold-Pressed: Extracted from Nigella sativa seeds without heat or chemical solvents",
+      "Contains Thymoquinone (TQ): Naturally provides 10 mg Thymoquinone and 1000 mg Black Seed Oil per 1 ml serving",
+      "Daily Immune & Antioxidant Support: Formulated to support normal immune function, antioxidant protection, general vitality, and everyday wellbeing",
+      "Measured 1 ml Serving: Comes with a precision syringe (1 ml / ~30 drops) for effortless daily dosing",
+      "Pairs with Honey: Mix with a spoonful of TrueHive Honey to soften the strong natural taste",
+      "Double Lab-Tested: Verified by Analytical Reference Laboratory (Report No: ARL/TR/26/042, Issued 19 June 2026)",
     ],
     reviews: [
       {
-        author: "Dr. K. Silva",
-        text: "Best quality pure cold-pressed black seed oil in Sri Lanka. Lab tested with high thymoquinone potency.",
+        author: "Marcus Fernando (Fitness Instructor)",
+        text: "My immune system used to take a hit during seasonal changes. Taking PROTECT daily has kept me in peak shape year-round. It's strong but extremely pure.",
       },
       {
-        author: "Saman Perera (Colombo)",
-        text: "After 14 days of daily use, my recurring sinus allergies and morning congestion completely cleared up.",
+        author: "Sachie Weerasinghe (Homemaker)",
+        text: "A wonderful health support. I mix it with a bit of wild bee honey, and it has made a remarkable difference in my joints and overall energy levels.",
       },
       {
-        author: "Ayesha N.",
-        text: "Taking it with TrueHive honey every morning. Feeling super energetic and active throughout the day!",
+        author: "Dinithi Silva (Entrepreneur)",
+        text: "Protect has become a daily wellness habit for me. I love knowing I'm using natural ingredients as part of my healthy lifestyle.",
+      },
+      {
+        author: "Amanda Lee (Marketing Manager)",
+        text: "I prefer natural wellness products, and Protect has exceeded my expectations. The quality and taste are excellent.",
+      },
+      {
+        author: "Ishara Samarasinghe (HR Manager)",
+        text: "Protect is an easy addition to my daily routine. I appreciate the premium quality and natural ingredients.",
+      },
+      {
+        author: "James Peterson (Financial Analyst)",
+        text: "Protect has become one of the wellness products I never miss. I like the premium packaging and overall quality.",
       },
     ],
     otherDetails:
-      "First-press extraction at low temperatures (<35°C) to preserve volatile oils and active Thymoquinone. Suitable for daily preventive wellness.",
+      "THE SCIENCE OF PROTECT: Protect is cold-pressed black seed oil from Nigella sativa seeds, naturally containing thymoquinone. Extracted without heat or chemical solvents.\nDELIVERY & GUARANTEE: Nationwide Free Delivery (processed within 1–3 business days). Cash on Delivery or card payment available. Backed by a 1-Month 100% Money-Back Guarantee.",
     customSpecs: [
-      { label: "Extraction Method", value: "100% Virgin Cold-Pressed" },
-      { label: "Active Compound", value: "High Thymoquinone (TQ)" },
-      { label: "Volume", value: "100 ml Amber Glass Bottle" },
+      { label: "Official Product Name", value: "EverYoung Protect (The Core 4 — Daily Support)" },
+      { label: "Volume & Servings", value: "100 ml Bottle | 150 Servings (1 ml / ~30 drops per serving)" },
+      { label: "Active Compounds (per 1 ml)", value: "Black Seed Oil 1000 mg | Thymoquinone (TQ) 10 mg" },
+      { label: "Extraction Method", value: "Cold-Pressed without Heat or Chemical Solvents" },
+      { label: "Lab Report Reference", value: "ARL/TR/26/042 — Analytical Reference Laboratory (19 June 2026)" },
+      { label: "Customer Rating", value: "4.7 / 5.0 Stars (1,150+ Customer Reviews)" },
+      { label: "Recommended Bundle", value: "EverYoung Protect Bundle (Honey + Protect + Sleep) — LKR 12,000 (Save LKR 500)" },
+      { label: "Delivery & Guarantee", value: "Nationwide Free Delivery (1–3 Days) | 1-Month 100% Money-Back Guarantee" },
     ],
   },
   "TH-PRD-3628": {
-    tagline: "100% Pure Unpasteurised Ceylon Bee Honey | Raw Natural Energy",
+    version: OFFICIAL_KB_VERSION,
+    tagline:
+      "Pure Honey Reserve — Wild-Harvested Raw Ceylon Bee Honey with Traceable Sourcing (4.8★ | 1,240+ Reviews)",
     howToUse:
-      "Consume 1 teaspoon directly, stir into lukewarm water or herbal tea, or drizzle over breakfast. Combine with TrueHive Protect Black Seed Oil in the morning for maximum immunity.",
-    servings: "1 - 2 teaspoons (5 ml - 10 ml) daily",
-    bestTimeToUse: "First thing in the morning on an empty stomach, pre-workout, or before bedtime",
-    storage: "Store at room temperature in a dry place. Do not refrigerate.",
+      "MEASURE: Add a few drops or a spoonful of Honey to your beverage using the dropper.\nCONSUME: Mix well into lukewarm milk, tea, or water, or drizzle over breakfast and desserts. Avoid adding it to boiling hot liquids, as high heat can denature the honey's beneficial enzymes.\nCONSISTENCY: Enjoy daily in moderation as part of a balanced diet.",
+    servings:
+      "150 Servings per 100 ml bottle | Key Nutrients per 1g: Energy 3 kcal, Natural Sugars 0.82 g, High Polyphenols & Live Bioactive Enzymes",
+    bestTimeToUse:
+      "Daily morning ritual, pre-workout natural energy boost, or mixed with lukewarm tea, water, or TrueHive Protect",
+    storage: "Store in a cool, dry place at room temperature. Avoid boiling hot liquids.",
     ingredients:
-      "100% Pure Raw Ceylon Multi-Floral Bee Honey - Zero added sugar, no corn syrup, no artificial preservatives.",
-    mfgDate: "2026-02-01",
-    expDate: "2029-02-01",
-    shelfLife: "36 Months (Pure honey naturally preserves indefinitely when sealed)",
+      "100% Pure Raw Ceylon Bee Honey wild-harvested from Sri Lankan forest hives. Never pasteurised or ultra-filtered, retaining natural floral pollen and bioactive bio-enzymes (such as invertase and diastase) and polyphenol antioxidants.\nKey Nutrients per 1g: Energy 3 kcal, Natural Sugars 0.82 g, Antioxidants: High in Polyphenols, Bioactive Enzymes: Live & Active.",
+    mfgDate: "2026-06-19",
+    expDate: "2029-06-19",
+    shelfLife: "36 Months (Pure raw honey naturally preserves when stored in a cool, dry place)",
     precautions:
-      "Not recommended for infants under 12 months of age. Never mix with boiling hot water as high heat destroys live enzymes.",
+      "Consult your physician if pregnant, nursing, or on medication. Not suitable for infants under 12 months. If you have diabetes or another medical condition, ask your doctor how much sugar, including honey, is right for you. Do not mix into boiling hot liquids.",
     pairings:
-      "Highly recommended to pair with TrueHive Protect (Black Seed Oil) or TrueHive Sleeep elixir.",
+      "Pair with TrueHive Protect (Black Seed Oil) to soften the taste and support daily immunity. Available in Pure Honey Bundle (Honey + Honey Mini for LKR 6,000 — Save LKR 500), EverYoung Protect Bundle (LKR 12,000), and EverYoung Grow Bundle (LKR 9,000).",
     benefits: [
-      "100% pure, raw, unpasteurised Sri Lankan wild floral bee honey",
-      "Retains all natural live enzymes, bee pollen, vitamins, and antioxidants",
-      "Healthy, natural alternative to refined white sugar",
-      "Soothes sore throats, coughs, and supports smooth digestion and gut health",
-      "Provides instant natural energy boost for workouts and busy lifestyles",
+      "Natural Energy: Honey's natural sugars provide clean energy (about 3 kcal per gram) with no crash",
+      "Never Pasteurised or Ultra-Filtered: Bottled with minimal processing so it stays close to how it left the forest hive",
+      "Retains Bioactive Bio-Enzymes & Pollens: Naturally contains live enzymes (invertase and diastase), wild floral pollen, and high polyphenol antioxidants",
+      "Healthy Sugar Alternative: Use in place of refined white sugar in lukewarm drinks, tea, breakfast, and recipes",
+      "Smooth Floral Taste: Rich, authentic floral flavour harvested from Sri Lankan forest hives",
+      "Double Lab-Tested: Verified by Analytical Reference Laboratory (Report Nos: ARL/TR/26/038 & ARL/TR/26/039, Issued 19 June 2026)",
     ],
     reviews: [
       {
-        author: "Nimani F.",
-        text: "Smooth floral aroma and authentic taste. Passed every purity test at home!",
+        author: "Diluka Weerasooriya (Endurance Athlete)",
+        text: "I've replaced my pre-workout powders with a shot of TrueHive Honey. No crash, just clean energy for my 10-mile runs. Plus, the taste is surprisingly addictive.",
       },
       {
-        author: "Roshan M.",
-        text: "I combine 1 teaspoon with Protect oil every morning. Best daily ritual for stamina.",
+        author: "Isuru Liyanage (Software Engineer)",
+        text: "As someone with chronic digestive issues, I was skeptical. Two weeks in, and the bloating is completely gone. This has become my indispensable morning ritual.",
+      },
+      {
+        author: "Sampath Anuradha (Fitness Coach)",
+        text: "Quality is everything in my line of work. TrueHive provides the transparency I need for my clients. The combination of Ceylon honey and Black Seed is simply revolutionary for inflammation.",
+      },
+      {
+        author: "Nimal Perera (Chartered Accountant)",
+        text: "Has become part of my morning routine. I feel more refreshed and focused throughout my busy workday without relying on multiple cups of coffee.",
+      },
+      {
+        author: "Michael Anderson (Business Consultant)",
+        text: "I travel frequently for work, and it helps me stay energized during long meetings. It's now always in my travel bag.",
+      },
+      {
+        author: "Tharindu Wijesinghe (Fitness Trainer)",
+        text: "Gives me a natural boost before my morning workouts. I appreciate that it fits well into my wellness routine.",
       },
     ],
     otherDetails:
-      "Ethically harvested from pristine forest apiaries in Sri Lanka. Coarse-filtered only to keep natural pollen intact.",
+      "THE SCIENCE OF HONEY: Wild-harvested Ceylon bee honey from Sri Lankan forest hives, bottled with minimal processing. Never pasteurised or ultra-filtered.\nAVAILABLE SIZES ON TRUEHIVE.LK: 20ml Trial, 100ml Standard, and 200ml.\nDELIVERY & GUARANTEE: Nationwide Free Delivery (1–3 business days), Cash on Delivery, 1-Month 100% Money-Back Guarantee.",
     customSpecs: [
-      { label: "Origin", value: "100% Ceylon Forest Apiaries" },
-      { label: "Processing", value: "Raw & Never Pasteurised" },
-      { label: "Lab Tested", value: "Certified No Added Sugar" },
+      { label: "Official Product Name", value: "Pure Honey Reserve (The Core 4 — Purity & Origin)" },
+      { label: "Volume & Servings", value: "100 ml Bottle | 150 Servings" },
+      { label: "Origin & Sourcing", value: "Wild-Harvested from Sri Lankan Forest Hives" },
+      { label: "Processing", value: "100% Raw, Never Pasteurised, Never Ultra-Filtered" },
+      { label: "Nutrients per 1g", value: "3 kcal Energy | 0.82g Natural Sugars | High Polyphenols | Live Invertase & Diastase Enzymes" },
+      { label: "Lab Report Reference", value: "ARL/TR/26/038 & ARL/TR/26/039 — Analytical Reference Laboratory (19 June 2026)" },
+      { label: "Customer Rating", value: "4.8 / 5.0 Stars (1,240+ Customer Reviews)" },
+      { label: "Bundle Offers", value: "Pure Honey Bundle (LKR 6,000) | EverYoung Protect Bundle (LKR 12,000) | EverYoung Grow Bundle (LKR 9,000)" },
     ],
   },
   "TH-PRD-3227": {
-    tagline: "Deep Restorative Sleep & Stress Relief Botanical Formula",
+    version: OFFICIAL_KB_VERSION,
+    tagline:
+      "TrueHive Sleep — Ashwagandha Bedtime Support | A Calmer Evening Starts With Clarity (4.6★ | 980+ Reviews)",
     howToUse:
-      "Take 5-10 drops directly under the tongue or mix into a small cup of warm water or herbal tea 30 minutes before going to bed.",
-    servings: "2.5 ml - 5 ml (10-15 drops) once daily at night",
-    bestTimeToUse: "30 minutes before bedtime in a calm, dim environment",
-    storage: "Store in a cool, dark cabinet away from heat and moisture.",
+      "SUGGESTED USE: Take 1 serving (1 ml / approx. 30 drops) using the syringe provided 30 minutes before bedtime.\nPREPARATION: Consume directly or stir into a warm glass of almond milk, chamomile tea, or water.\nCYCLE: Follow the serving instructions on the label. Do not exceed the recommended serving.",
+    servings: "150 Servings per 100 ml bottle | Serving Size: 1 ml (Approx. 30 Drops)",
+    bestTimeToUse: "About 30 minutes before bedtime as part of your evening wind-down routine",
+    storage:
+      "Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken.",
     ingredients:
-      "Ashwagandha Root Extract, Roman Chamomile, Pure Lavender Botanicals, Raw Ceylon Bee Honey Base.",
-    mfgDate: "2026-01-10",
-    expDate: "2028-01-10",
-    shelfLife: "24 Months",
+      "Built around premium Ashwagandha (Withania somnifera) root extract.\nActive Composition per 1 ml Serving (Approx. 30 Drops): Ashwagandha Root Extract 1000 mg, L-Theanine 100 mg, Chamomile Extract 50 mg, Melatonin 1 mg.",
+    mfgDate: "2026-06-19",
+    expDate: "2028-06-19",
+    shelfLife: "24 Months (Unopened) / 1–3 Months after opening",
     precautions:
-      "Do not drive or operate heavy machinery after taking. Avoid combining with alcohol or sedative medications.",
+      "Consult your doctor or pharmacist before use if you are pregnant, breastfeeding, taking medication or have a medical condition. Ashwagandha may interact with some medicines. Sleep is a wellness supplement, not a sleeping medicine. Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken.",
     pairings:
-      "Pair with 1 teaspoon of TrueHive Pure Honey in warm chamomile water before bed for deeper relaxation.",
+      "Featured in the EverYoung Protect Bundle (Includes Honey + Protect + Sleep for LKR 12,000 — Save LKR 500) and the EverYoung Grow Bundle (Includes Honey + Grow + Sleep for LKR 9,000 — Save LKR 500).",
     benefits: [
-      "Calms an overactive mind and naturally relieves insomnia and restlessness",
-      "Promotes 7-8 hours of uninterrupted, deep restorative REM sleep",
-      "Wake up refreshed and energized with zero morning grogginess or habit dependency",
-      "Reduces evening cortisol, mental stress, anxiety, and physical fatigue",
+      "Bedtime Ritual: Designed to be taken about 30 minutes before bed for night-time relaxation and restorative sleep support",
+      "Wind-Down Support: Helps calm a racing mind and supports relaxation at the end of a busy, stressful day",
+      "Ashwagandha Root Extract (1000 mg): Made with Withania somnifera root extract, traditionally used in Ayurveda for relaxation and stress response",
+      "Synergistic Calming Blend: Formulated with L-Theanine (100 mg), Chamomile Extract (50 mg), and Melatonin (1 mg) per 1 ml serving",
+      "Measured Serving: Each 1 ml serving (~30 drops) is easily measured with the syringe provided",
+      "Easy to Take: Take directly or stir into warm almond milk, chamomile herbal tea, or water",
     ],
     reviews: [
       {
-        author: "Chathurika D.",
-        text: "Suffered from work-related insomnia for months. Now I fall asleep peacefully within 15 minutes!",
+        author: "Manuthi Ranasinghe (Yoga Instructor)",
+        text: "My sleep quality had deteriorated due to work overload. Sleep has restored my sleep cycles completely. I wake up light, clear-headed, and energized.",
       },
       {
-        author: "Kavinda P.",
-        text: "100% natural herbs with no dependency. I wake up fresh at 6 AM every day.",
+        author: "Christopher De Silva (CEO)",
+        text: "Staring at screens all day leaves my mind racing at night. A serving before bed calms the chatter and allows me to sleep like a child.",
+      },
+      {
+        author: "Anjali Fernando (School Teacher)",
+        text: "After a long day of teaching, it helps me unwind. I've noticed I'm sleeping more peacefully and waking up feeling refreshed.",
+      },
+      {
+        author: "Ruwan De Mel (Restaurant Owner)",
+        text: "Running a restaurant is stressful. It helps me slow down at the end of the day and enjoy a better night's rest.",
+      },
+      {
+        author: "Emily Carter (Yoga Instructor)",
+        text: "Complements my evening yoga practice perfectly. I feel calmer before bedtime and wake up feeling refreshed.",
+      },
+      {
+        author: "Harshini Ekanayake (Pharmacist)",
+        text: "Has become my favorite evening ritual. It helps me switch off after busy days at the pharmacy.",
       },
     ],
     otherDetails:
-      "Non-habit forming botanical synergy designed for high-stress professionals and light sleepers.",
+      "THE SCIENCE OF SLEEP: Built around ashwagandha (Withania somnifera), a botanical traditionally used in Ayurveda and studied for its role in relaxation and the body's response to stress. Unlike general ashwagandha products, TrueHive Sleep is specifically formulated as a bedtime wind-down supplement.\nDELIVERY & GUARANTEE: Nationwide Free Delivery (1–3 business days), Cash on Delivery, 1-Month 100% Money-Back Guarantee.",
     customSpecs: [
-      { label: "Formula Type", value: "100% Herbal & Melatonin-Free" },
-      { label: "Key Adaptogen", value: "Organic Ashwagandha & Chamomile" },
-      { label: "Habit Forming", value: "No (100% Non-Addictive)" },
+      { label: "Official Product Name", value: "TrueHive Sleep (The Core 4 — Rest & Routine)" },
+      { label: "Volume & Servings", value: "100 ml Bottle | 150 Servings (1 ml / ~30 drops per serving)" },
+      { label: "Active Ingredients (per 1 ml)", value: "Ashwagandha Root 1000 mg | L-Theanine 100 mg | Chamomile 50 mg | Melatonin 1 mg" },
+      { label: "Key Botanical", value: "Withania somnifera (Ashwagandha Root Extract)" },
+      { label: "Customer Rating", value: "4.6 / 5.0 Stars (980+ Customer Reviews)" },
+      { label: "Bundle Offers", value: "EverYoung Protect Bundle (LKR 12,000) | EverYoung Grow Bundle (LKR 9,000)" },
+      { label: "Delivery & Guarantee", value: "Nationwide Free Delivery (1–3 Days) | 1-Month 100% Money-Back Guarantee" },
     ],
   },
   "TH-PRD-5786": {
-    tagline: "Botanical Hair Growth & Scalp Follicle Vitality Elixir",
+    version: OFFICIAL_KB_VERSION,
+    tagline:
+      "EverYoung Grow — Castor & Black Seed Hair, Scalp and Beard Oil | A Considered Scalp-Care Routine (4.5★ | 820+ Reviews)",
     howToUse:
-      "Apply a few drops directly onto the scalp and hair roots 3-4 times a week. Gently massage with fingertips for 5 minutes. Leave on for at least 1-2 hours (or overnight) before washing with a mild shampoo.",
-    servings: "3 ml - 5 ml per scalp application (3 to 4 times per week)",
-    bestTimeToUse: "1-2 hours before bath or overnight before bedtime",
-    storage: "Keep tightly closed at room temperature away from direct sunlight.",
+      "SUGGESTED USE: Apply 2–3 droppers directly to the scalp, hair, or beard. Massage gently for 2–3 minutes. Use 2–4 times per week.\nLEAVE IN: Leave the oil in for at least 45–60 minutes, or leave overnight for deep nutrient absorption.\nWASH OUT: Wash thoroughly using a mild natural shampoo.",
+    servings:
+      "150 Applications per 100 ml bottle | 2–3 droppers per application (Use 2–4 times per week)",
+    bestTimeToUse:
+      "Leave in for at least 45–60 minutes before washing, or leave overnight before bedtime (2–4 times per week)",
+    storage:
+      "Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken.",
     ingredients:
-      "Pure Rosemary Essential Oil, Cold-Pressed Castor Oil, Black Seed (Nigella Sativa) Extract, Virgin King Coconut Oil, Natural Vitamin E.",
-    mfgDate: "2026-01-20",
-    expDate: "2028-01-20",
-    shelfLife: "24 Months",
+      "Active Botanical Oils:\n1. Cold-Pressed Castor Oil (Pure Ricinus communis oil, cold-pressed to retain natural ricinoleic acid)\n2. Pure Cold-Pressed Black Seed Oil (Pressed from Nigella sativa seeds, offering natural fatty acids for hair and scalp conditioning)\n3. Virgin Coconut Oil (Active conditioning & moisture retention)",
+    mfgDate: "2026-06-19",
+    expDate: "2028-06-19",
+    shelfLife: "24 Months (Unopened) / 1–3 Months after opening",
     precautions:
-      "For external scalp and hair use only. Avoid contact with eyes. Perform a small patch test if you have a sensitive scalp.",
+      "For external use only. Patch test before first use and stop if irritation occurs. Avoid contact with eyes. Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken. Results vary from person to person, and no cosmetic oil can guarantee hair growth.",
     pairings:
-      "Combine external use of TrueHive Grow with daily internal intake of TrueHive Protect for complete inside-out hair follicle nutrition.",
+      "Featured in the EverYoung Grow Bundle (Includes Honey + Grow + Sleep for LKR 9,000 — Save LKR 500 off LKR 9,500). Can also be paired with daily internal use of TrueHive Protect.",
     benefits: [
-      "Reduces hair fall and stimulates dormant hair follicles for new hair regrowth",
-      "Strengthens hair roots and increases overall hair thickness, volume, and shine",
-      "Deeply nourishes dry scalp and eliminates dandruff and itchiness",
-      "Helps prevent premature greying and split ends naturally",
+      "Scalp Massage & Root Care: Designed to be massaged into the scalp as part of a regular routine to nourish roots and support hair density",
+      "Cold-Pressed Castor Oil Base: Rich in natural ricinoleic acid combined with Black Seed Oil and Virgin Coconut Oil",
+      "Hair Conditioning & Natural Shine: Helps dry, dull, or rough-feeling hair feel softer, shinier, and more manageable",
+      "Dry Scalp Comfort: Moisturises dry-feeling skin on the scalp and helps reduce dandruff and flakiness",
+      "Hair & Beard Care in One: Formulated to nourish and condition both scalp hair and facial beard hair and the skin underneath",
+      "Suitable for Men & Women: Can be used by adults of any gender as part of a regular hair and grooming routine",
     ],
     reviews: [
       {
-        author: "Dinithi P.",
-        text: "Noticeable baby hair growth along my hairline within 3 weeks of regular use!",
+        author: "Dilini Perera (Hairstylist)",
+        text: "Many of my clients struggled with thinning hair. After recommending GROW, I've seen visible improvements in root strength and overall density in just 3 weeks.",
       },
       {
-        author: "Mahesh B.",
-        text: "Dandruff is completely gone and hair thickness improved significantly. Highly recommended.",
+        author: "Sandun Randeni (Manager Finance)",
+        text: "Helped reduce my dandruff and dry scalp significantly. It has a rich texture, so leaving it on overnight and washing it off works best.",
+      },
+      {
+        author: "Kasun Jayawardena (Software Engineer)",
+        text: "I've been using Grow consistently for two months. My hair feels healthier and stronger, and I've noticed less hair fall during washing.",
+      },
+      {
+        author: "Chamari Gunasekara (University Lecturer)",
+        text: "After several weeks of using Grow, my hair looks healthier and shinier. I'm happy with the results so far.",
+      },
+      {
+        author: "Nadeesha Karunaratne (Dentist)",
+        text: "I was looking for a natural hair care solution, and Grow has been a great addition to my self-care routine.",
+      },
+      {
+        author: "Sophia Bennett (Graphic Designer)",
+        text: "Grow has made my hair feel softer and healthier. I love that it's made with natural ingredients.",
       },
     ],
     otherDetails:
-      "Lightweight, non-sticky botanical oil blend formulated for both men and women experiencing hair thinning.",
+      "THE SCIENCE OF GROW: Combines cold-pressed castor oil (Ricinus communis), rich in ricinoleic acid, with cold-pressed black seed oil (Nigella sativa) and virgin coconut oil. Massaged into the scalp or beard, the blend conditions hair and reduces dryness.\nDELIVERY & GUARANTEE: Nationwide Free Delivery (1–3 business days), Cash on Delivery, 1-Month 100% Money-Back Guarantee.",
     customSpecs: [
-      { label: "Application Type", value: "External Scalp & Hair Oil" },
-      { label: "Key Actives", value: "Rosemary, Black Seed & Castor Oil" },
-      { label: "Paraben & Sulfate", value: "100% Free (No Mineral Oil)" },
+      { label: "Official Product Name", value: "EverYoung Grow (The Core 4 — Scalp, Hair & Beard)" },
+      { label: "Volume & Applications", value: "100 ml Bottle | 150 Applications (2–3 droppers per use)" },
+      { label: "Active Ingredients", value: "Cold-Pressed Castor Oil + Cold-Pressed Black Seed Oil + Virgin Coconut Oil" },
+      { label: "Key Fatty Acid", value: "Ricinoleic Acid & Nigella Sativa Essential Fatty Acids" },
+      { label: "Application Areas", value: "Scalp, Hair & Beard Care (Suitable for Adult Men & Women)" },
+      { label: "Customer Rating", value: "4.5 / 5.0 Stars (820+ Customer Reviews)" },
+      { label: "Recommended Bundle", value: "EverYoung Grow Bundle (Honey + Grow + Sleep) — LKR 9,000 (Save LKR 500)" },
+      { label: "Delivery & Guarantee", value: "Nationwide Free Delivery (1–3 Days) | 1-Month 100% Money-Back Guarantee" },
     ],
   },
 };
@@ -224,9 +327,6 @@ export function ProductKnowledgeModal({
   const [otherDetails, setOtherDetails] = useState("");
   const [customSpecs, setCustomSpecs] = useState<Array<{ label: string; value: string }>>([]);
 
-  // Helper to strip Sinhala characters if old cached data had Sinhala
-  const hasSinhala = (str?: string) => Boolean(str && /[\u0D80-\u0DFF]/.test(str));
-
   // Populate data when product opens
   useEffect(() => {
     if (product) {
@@ -234,36 +334,35 @@ export function ProductKnowledgeModal({
       if (typeof window !== "undefined") {
         try {
           const raw = localStorage.getItem(`truehive_kb_${product.sku || product.id}`);
-          if (raw) cachedKb = JSON.parse(raw);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed?.version === OFFICIAL_KB_VERSION) {
+              cachedKb = parsed;
+            }
+          }
         } catch {}
       }
 
       const defaultPreset = DEFAULT_ENGLISH_KB_BY_SKU[product.sku] || {};
-      const rawKb = cachedKb || product.knowledgeBase || {};
+      const dbKb =
+        product.knowledgeBase?.version === OFFICIAL_KB_VERSION ? product.knowledgeBase : null;
+      const rawKb = cachedKb || dbKb || defaultPreset;
 
-      // Use rawKb if present and in English, otherwise fallback to clean English preset
-      const pickText = (val: string | undefined, fallback: string | undefined) => {
-        if (val && !hasSinhala(val)) return val;
-        return fallback || "";
-      };
-
-      setTagline(pickText(rawKb.tagline, defaultPreset.tagline));
-      setHowToUse(pickText(rawKb.howToUse, defaultPreset.howToUse));
-      setServings(pickText(rawKb.servings, defaultPreset.servings));
-      setBestTimeToUse(pickText(rawKb.bestTimeToUse, defaultPreset.bestTimeToUse));
-      setStorage(pickText(rawKb.storage, defaultPreset.storage));
-      setIngredients(pickText(rawKb.ingredients, defaultPreset.ingredients));
+      setTagline(rawKb.tagline || defaultPreset.tagline || "");
+      setHowToUse(rawKb.howToUse || defaultPreset.howToUse || "");
+      setServings(rawKb.servings || defaultPreset.servings || "");
+      setBestTimeToUse(rawKb.bestTimeToUse || defaultPreset.bestTimeToUse || "");
+      setStorage(rawKb.storage || defaultPreset.storage || "");
+      setIngredients(rawKb.ingredients || defaultPreset.ingredients || "");
       setMfgDate(rawKb.mfgDate || defaultPreset.mfgDate || "");
       setExpDate(rawKb.expDate || defaultPreset.expDate || "");
-      setShelfLife(pickText(rawKb.shelfLife, defaultPreset.shelfLife));
-      setPairings(pickText(rawKb.pairings, defaultPreset.pairings));
-      setPrecautions(pickText(rawKb.precautions, defaultPreset.precautions));
-      setOtherDetails(pickText(rawKb.otherDetails, defaultPreset.otherDetails));
+      setShelfLife(rawKb.shelfLife || defaultPreset.shelfLife || "");
+      setPairings(rawKb.pairings || defaultPreset.pairings || "");
+      setPrecautions(rawKb.precautions || defaultPreset.precautions || "");
+      setOtherDetails(rawKb.otherDetails || defaultPreset.otherDetails || "");
 
-      const rawBenefits = Array.isArray(rawKb.benefits) ? rawKb.benefits : [];
-      const englishBenefits = rawBenefits.filter((b: string) => b && !hasSinhala(b));
-      if (englishBenefits.length > 0) {
-        setBenefitsList(englishBenefits);
+      if (Array.isArray(rawKb.benefits) && rawKb.benefits.length > 0) {
+        setBenefitsList(rawKb.benefits);
       } else if (Array.isArray(defaultPreset.benefits) && defaultPreset.benefits.length > 0) {
         setBenefitsList(defaultPreset.benefits);
       } else {
@@ -273,12 +372,8 @@ export function ProductKnowledgeModal({
         ]);
       }
 
-      const rawReviews = Array.isArray(rawKb.reviews) ? rawKb.reviews : [];
-      const englishReviews = rawReviews.filter(
-        (r: any) => r && !hasSinhala(r.text) && !hasSinhala(r.author)
-      );
-      if (englishReviews.length > 0) {
-        setReviewsList(englishReviews);
+      if (Array.isArray(rawKb.reviews) && rawKb.reviews.length > 0) {
+        setReviewsList(rawKb.reviews);
       } else if (Array.isArray(defaultPreset.reviews) && defaultPreset.reviews.length > 0) {
         setReviewsList(defaultPreset.reviews);
       } else {
@@ -354,6 +449,7 @@ export function ProductKnowledgeModal({
     setErrorMsg("");
 
     const updatedKb = {
+      version: OFFICIAL_KB_VERSION,
       productName: product.name,
       tagline: tagline.trim(),
       howToUse: howToUse.trim(),
@@ -374,7 +470,6 @@ export function ProductKnowledgeModal({
     };
 
     try {
-      // Cache locally for immediate UI persistence
       if (typeof window !== "undefined") {
         try {
           localStorage.setItem(
@@ -466,7 +561,7 @@ export function ProductKnowledgeModal({
           </div>
         )}
 
-        {/* Tab Navigation (Clean wrap without horizontal scrollbar) */}
+        {/* Tab Navigation */}
         <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-800 pb-2.5">
           <button
             type="button"
@@ -542,10 +637,10 @@ export function ProductKnowledgeModal({
                 How to Consume / Use
               </label>
               <textarea
-                rows={3}
+                rows={4}
                 value={howToUse}
                 onChange={(e) => setHowToUse(e.target.value)}
-                placeholder="e.g. Take a few drops directly under the tongue or mix with warm water or pure bee honey before meals."
+                placeholder="e.g. Take 1 serving (1 ml) using the syringe provided, preferably on an empty stomach in the morning."
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -559,7 +654,7 @@ export function ProductKnowledgeModal({
                   type="text"
                   value={servings}
                   onChange={(e) => setServings(e.target.value)}
-                  placeholder="e.g. 2.5 ml - 5 ml (1/2 to 1 teaspoon) once or twice daily"
+                  placeholder="e.g. 150 Servings per 100 ml bottle | Serving Size: 1 ml (Approx. 30 Drops)"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                 />
               </div>
@@ -586,7 +681,7 @@ export function ProductKnowledgeModal({
                 type="text"
                 value={storage}
                 onChange={(e) => setStorage(e.target.value)}
-                placeholder="e.g. Store in a cool, dry place at room temperature away from direct sunlight."
+                placeholder="e.g. Store in a cool, dry place. Keep out of reach of children. Do not use if seal is broken."
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
@@ -604,7 +699,7 @@ export function ProductKnowledgeModal({
                 rows={3}
                 value={ingredients}
                 onChange={(e) => setIngredients(e.target.value)}
-                placeholder="e.g. 100% Pure Virgin Cold-Pressed Nigella Sativa (Black Seed Oil) - High Thymoquinone content, solvent-free."
+                placeholder="e.g. 100% pure cold-pressed Nigella sativa (Black Seed) oil, extracted without heat or chemical solvents."
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -642,7 +737,7 @@ export function ProductKnowledgeModal({
                   type="text"
                   value={shelfLife}
                   onChange={(e) => setShelfLife(e.target.value)}
-                  placeholder="e.g. 24 Months (2 Years)"
+                  placeholder="e.g. 24 Months (Unopened) / 1–3 Months after opening"
                   className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
                 />
               </div>
@@ -656,7 +751,7 @@ export function ProductKnowledgeModal({
                 rows={2}
                 value={precautions}
                 onChange={(e) => setPrecautions(e.target.value)}
-                placeholder="e.g. Consult a doctor before use if pregnant or nursing. Keep out of reach of children."
+                placeholder="e.g. Consult your doctor or pharmacist before use if you are pregnant, breastfeeding, taking medication or have a medical condition."
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -674,7 +769,7 @@ export function ProductKnowledgeModal({
                 type="text"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
-                placeholder="e.g. Cold-Pressed Black Seed Oil | Daily Immune & Cellular Support"
+                placeholder="e.g. EverYoung Protect — Cold-Pressed Black Seed Oil | Daily Support"
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
               />
             </div>
@@ -702,7 +797,7 @@ export function ProductKnowledgeModal({
                       type="text"
                       value={benefit}
                       onChange={(e) => handleUpdateBenefit(idx, e.target.value)}
-                      placeholder="e.g. Strengthens natural immunity and protects against seasonal allergies"
+                      placeholder="e.g. Cold-pressed without heat or chemical solvents"
                       className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500"
                     />
                     {benefitsList.length > 1 && (
@@ -721,13 +816,13 @@ export function ProductKnowledgeModal({
 
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1">
-                Recommended Pairings & Combo Upsell
+                Recommended Pairings & Bundle Offers
               </label>
               <input
                 type="text"
                 value={pairings}
                 onChange={(e) => setPairings(e.target.value)}
-                placeholder="e.g. Pair with TrueHive Pure Ceylon Honey to boost nutrient absorption by 3x."
+                placeholder="e.g. Mix with a spoonful of TrueHive Honey. Available in EverYoung Protect Bundle (LKR 12,000)."
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
               />
             </div>
@@ -743,7 +838,7 @@ export function ProductKnowledgeModal({
                   Customer Testimonials & Social Proof
                 </h4>
                 <p className="text-[11px] text-slate-400">
-                  The WhatsApp bot cites these genuine reviews when answering customer inquiries.
+                  The WhatsApp bot cites these verified reviews when answering customer inquiries.
                 </p>
               </div>
               <button
@@ -756,7 +851,7 @@ export function ProductKnowledgeModal({
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
               {reviewsList.map((rev, idx) => (
                 <div
                   key={idx}
@@ -767,7 +862,7 @@ export function ProductKnowledgeModal({
                       type="text"
                       value={rev.author}
                       onChange={(e) => handleUpdateReview(idx, "author", e.target.value)}
-                      placeholder="Customer Name / Location (e.g. Saman Perera - Colombo)"
+                      placeholder="Customer Name / Role (e.g. Marcus Fernando - Fitness Instructor)"
                       className="flex-1 px-2.5 py-1 bg-slate-900 border border-slate-750 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 font-semibold"
                     />
                     <button
@@ -783,7 +878,7 @@ export function ProductKnowledgeModal({
                     rows={2}
                     value={rev.text}
                     onChange={(e) => handleUpdateReview(idx, "text", e.target.value)}
-                    placeholder="Customer quote or testimonial (e.g. After 14 days of daily use, my sinus allergies completely cleared up)..."
+                    placeholder="Customer quote or testimonial..."
                     className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-750 rounded-lg text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500"
                   />
                 </div>
@@ -802,7 +897,7 @@ export function ProductKnowledgeModal({
                     Custom Specifications & Extra Attributes
                   </label>
                   <p className="text-[11px] text-slate-400">
-                    Add any extra product attributes (e.g. Origin, Volume, Extraction Method, Lab Certification).
+                    Add extra product attributes (e.g. Origin, Servings, Lab Report Reference, Bundle Offer).
                   </p>
                 </div>
                 <button
@@ -815,21 +910,21 @@ export function ProductKnowledgeModal({
                 </button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
                 {customSpecs.map((spec, idx) => (
                   <div key={idx} className="flex items-center gap-2">
                     <input
                       type="text"
                       value={spec.label}
                       onChange={(e) => handleUpdateCustomSpec(idx, "label", e.target.value)}
-                      placeholder="Field Name (e.g. Extraction Method)"
+                      placeholder="Field Name (e.g. Lab Report Reference)"
                       className="w-1/3 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-semibold"
                     />
                     <input
                       type="text"
                       value={spec.value}
                       onChange={(e) => handleUpdateCustomSpec(idx, "value", e.target.value)}
-                      placeholder="Value / Detail (e.g. 100% Virgin Cold-Pressed)"
+                      placeholder="Value / Detail (e.g. ARL/TR/26/042)"
                       className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
                     />
                     {customSpecs.length > 1 && (
