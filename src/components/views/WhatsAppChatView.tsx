@@ -109,6 +109,44 @@ function MessageTicks({
   );
 }
 
+/**
+ * Format chat timestamps accurately in Sri Lanka Standard Time (Asia/Colombo, UTC+5:30).
+ * Also converts legacy UTC-formatted strings (e.g. "4:03:47 PM") if createdAtIso is not yet present.
+ */
+function formatSriLankaChatTime(rawTimestamp?: string, isoString?: string): string {
+  if (isoString) {
+    try {
+      return new Date(isoString).toLocaleTimeString("en-US", {
+        timeZone: "Asia/Colombo",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    } catch {}
+  }
+  if (!rawTimestamp || rawTimestamp === "Just now") return rawTimestamp || "Just now";
+
+  // Check if rawTimestamp is a time string like "4:03:47 PM" or "16:03:47" from an older UTC container
+  const match = rawTimestamp.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+  if (match && !isoString) {
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const ampm = (match[4] || "").toUpperCase();
+    if (ampm === "PM" && hours < 12) hours += 12;
+    if (ampm === "AM" && hours === 12) hours = 0;
+
+    // Add +5 hours 30 minutes (UTC -> Asia/Colombo) if the browser sees this came without isoString from UTC backend
+    const totalMinutes = (hours * 60 + minutes + 330) % (24 * 60);
+    const slHours24 = Math.floor(totalMinutes / 60);
+    const slMinutes = totalMinutes % 60;
+    const period = slHours24 >= 12 ? "PM" : "AM";
+    const slHours12 = slHours24 % 12 === 0 ? 12 : slHours24 % 12;
+    return `${String(slHours12).padStart(2, "0")}:${String(slMinutes).padStart(2, "0")} ${period}`;
+  }
+
+  return rawTimestamp;
+}
+
 export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppChatViewProps) {
   const [selectedChatId, setSelectedChatId] = useState<string>(chats[0]?.id || "");
   const [mobileScreen, setMobileScreen] = useState<MobileScreen>("LIST");
@@ -479,18 +517,15 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     }
 
     // Optimistically show message immediately with 1 Grey Tick (SENT)
+    const nowIso = new Date().toISOString();
     const optimisticMessage = {
       id: `local-${Date.now()}`,
       direction: "OUTBOUND" as const,
       senderType: "HUMAN_AGENT" as const,
       messageType: (attachedFile?.type === "image" ? "IMAGE" : "TEXT") as "IMAGE" | "TEXT",
       content: messageContent,
-      timestamp: new Date().toLocaleTimeString("en-US", {
-        timeZone: "Asia/Colombo",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
+      timestamp: formatSriLankaChatTime(undefined, nowIso),
+      createdAtIso: nowIso,
       status: "SENT" as "SENT" | "DELIVERED" | "READ", // 1 Tick: sent to server, awaiting delivery
     };
 
@@ -499,6 +534,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     }
     activeChat.lastMessageText = messageContent;
     activeChat.lastMessageAt = optimisticMessage.timestamp;
+    (activeChat as any).lastMessageAtIso = nowIso;
     activeChat.unreadCount = 0;
     if (onMarkAsRead) {
       onMarkAsRead(activeChat.id);
@@ -734,7 +770,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                               chat.unreadCount > 0 ? "text-[#25D366] font-bold" : "text-[#8696a0]"
                             }`}
                           >
-                            {chat.lastMessageAt || "Recently"}
+                            {formatSriLankaChatTime(chat.lastMessageAt, (chat as any).lastMessageAtIso)}
                           </span>
                         </div>
 
@@ -890,7 +926,12 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               {/* Date Separator Pill */}
               <div className="flex justify-center my-2">
                 <span className="px-3 py-1 rounded-lg bg-[#182229] border border-[#222e35] text-[11px] text-[#8696a0] font-medium shadow-sm">
-                  {activeChat?.lastMessageAt ? `Live Chat • ${activeChat.lastMessageAt}` : "Today"}
+                  {activeChat?.lastMessageAt
+                    ? `Live Chat • ${formatSriLankaChatTime(
+                        activeChat.lastMessageAt,
+                        (activeChat as any).lastMessageAtIso
+                      )}`
+                    : "Today"}
                 </span>
               </div>
 
@@ -925,7 +966,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
 
                       {/* Timestamp & Accurate WhatsApp Delivery / Read Ticks */}
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#8696a0] select-none">
-                        <span>{msg.timestamp}</span>
+                        <span>{formatSriLankaChatTime(msg.timestamp, (msg as any).createdAtIso)}</span>
                         {!isCustomer && (
                           <MessageTicks
                             direction="OUTBOUND"
@@ -1216,7 +1257,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                             chat.unreadCount > 0 ? "text-emerald-400 font-bold" : "text-slate-400"
                           }`}
                         >
-                          {chat.lastMessageAt || "Recently"}
+                          {formatSriLankaChatTime(chat.lastMessageAt, (chat as any).lastMessageAtIso)}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 font-mono mb-1">{chat.whatsappPhone}</p>
@@ -1323,7 +1364,12 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 {/* Date separator pill */}
                 <div className="flex justify-center my-1">
                   <span className="px-3 py-1 rounded-lg bg-[#182229] border border-[#222e35] text-[11px] text-[#8696a0] font-medium shadow-sm">
-                    {activeChat.lastMessageAt ? `Live Chat • ${activeChat.lastMessageAt}` : "Today"}
+                    {activeChat.lastMessageAt
+                      ? `Live Chat • ${formatSriLankaChatTime(
+                          activeChat.lastMessageAt,
+                          (activeChat as any).lastMessageAtIso
+                        )}`
+                      : "Today"}
                   </span>
                 </div>
 
@@ -1357,7 +1403,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                             <span className="font-bold text-slate-300">{activeChat.customerName}</span>
                           )}
                           <span>•</span>
-                          <span>{msg.timestamp}</span>
+                          <span>{formatSriLankaChatTime(msg.timestamp, (msg as any).createdAtIso)}</span>
                         </div>
 
                         {/* Content */}
