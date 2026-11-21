@@ -17,6 +17,7 @@ export interface ProductItem {
   reorderLevel: number;
   unit: string;
   trackBom: boolean;
+  knowledgeBase?: any;
   isActive?: boolean;
   variants?: Array<{
     id: string;

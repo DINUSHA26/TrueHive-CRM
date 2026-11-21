@@ -30,6 +30,7 @@ import { BarcodeDisplay } from "@/components/BarcodeDisplay";
 import { BarcodeGeneratorModal } from "@/components/products/BarcodeGeneratorModal";
 import { ProductFormModal } from "@/components/products/ProductFormModal";
 import { StockUpdateModal } from "@/components/products/StockUpdateModal";
+import { ProductKnowledgeModal } from "@/components/products/ProductKnowledgeModal";
 import { CategoryManagementView } from "@/components/categories/CategoryManagementView";
 import type { ProductItem, IngredientItem, SupplierRecord } from "@/lib/store";
 
@@ -59,6 +60,7 @@ export function ProductInventoryView({
   const [barcodeModalProduct, setBarcodeModalProduct] = useState<any | null>(null);
   const [stockUpdateProduct, setStockUpdateProduct] = useState<ProductItem | null>(null);
   const [viewVariantsProduct, setViewVariantsProduct] = useState<ProductItem | null>(null);
+  const [knowledgeModalProduct, setKnowledgeModalProduct] = useState<ProductItem | null>(null);
 
   // Ingredient modal (Add & Edit)
   const [ingredientModalOpen, setIngredientModalOpen] = useState(false);
@@ -556,6 +558,16 @@ export function ProductInventoryView({
                             <BarcodeIcon className="w-4 h-4" />
                           </button>
 
+                          {/* Product Details & AI Knowledge Base */}
+                          <button
+                            type="button"
+                            onClick={() => setKnowledgeModalProduct(p)}
+                            title="Product Details & AI Knowledge Base (Benefits, Ingredients, Usage, Reviews)"
+                            className="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 rounded-lg transition"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                          </button>
+
                           {/* Edit Product */}
                           <button
                             type="button"
@@ -741,6 +753,14 @@ export function ProductInventoryView({
         onSuccess={onRefresh}
         initialProduct={editingProduct}
         categories={categoriesList}
+      />
+
+      {/* Product Knowledge Base & AI Details Modal */}
+      <ProductKnowledgeModal
+        isOpen={Boolean(knowledgeModalProduct)}
+        onClose={() => setKnowledgeModalProduct(null)}
+        onSuccess={onRefresh}
+        product={knowledgeModalProduct}
       />
 
       {/* Quick Stock Adjustment Modal */}
