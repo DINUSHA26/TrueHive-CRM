@@ -304,7 +304,7 @@ export function ProductInventoryView({
                 onClick={handleOpenCreateProduct}
                 leftIcon={<Plus className="w-4 h-4" />}
               >
-                + New Product
+                New Product
               </Button>
             </div>
           )}
@@ -331,10 +331,10 @@ export function ProductInventoryView({
 
       {/* View Switcher Tabs & Search Toolbar */}
       <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full pb-1 whitespace-nowrap">
           <button
             onClick={() => setActiveTab("PRODUCTS")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               activeTab === "PRODUCTS"
                 ? "bg-blue-600 text-white"
                 : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
@@ -344,7 +344,7 @@ export function ProductInventoryView({
           </button>
           <button
             onClick={() => setActiveTab("INGREDIENTS_BOM")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
               activeTab === "INGREDIENTS_BOM"
                 ? "bg-blue-600 text-white"
                 : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
@@ -355,7 +355,7 @@ export function ProductInventoryView({
           </button>
           <button
             onClick={() => setActiveTab("CATEGORIES")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 ${
               activeTab === "CATEGORIES"
                 ? "bg-blue-600 text-white"
                 : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"
@@ -366,7 +366,7 @@ export function ProductInventoryView({
           </button>
           <button
             onClick={() => setActiveTab("BARCODE_PRINTER")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
               activeTab === "BARCODE_PRINTER"
                 ? "bg-blue-600 text-white"
                 : "bg-slate-950 border border-slate-800 text-slate-400 hover:text-white"

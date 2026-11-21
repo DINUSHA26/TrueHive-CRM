@@ -6,8 +6,8 @@ export function Table({
   ...props
 }: React.TableHTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-x-auto rounded-xl border border-slate-800/80 bg-slate-900/40">
-      <table className={`w-full text-left text-xs text-slate-300 ${className}`} {...props}>
+    <div className="w-full overflow-x-auto no-scrollbar rounded-xl border border-slate-800/80 bg-slate-900/40">
+      <table className={`w-full min-w-[500px] text-left text-xs text-slate-300 ${className}`} {...props}>
         {children}
       </table>
     </div>

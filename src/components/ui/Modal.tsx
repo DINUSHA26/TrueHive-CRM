@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { X } from "lucide-react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface ModalProps {
   isOpen: boolean;
@@ -18,16 +19,16 @@ export function Modal({
   children,
   maxWidth = "lg",
 }: ModalProps) {
+  useBodyScrollLock(isOpen);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     if (isOpen) {
-      document.body.style.overflow = "hidden";
       window.addEventListener("keydown", handleKeyDown);
     }
     return () => {
-      document.body.style.overflow = "unset";
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -45,7 +46,7 @@ export function Modal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overscroll-contain">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity"
@@ -54,11 +55,11 @@ export function Modal({
 
       {/* Modal Dialog */}
       <div
-        className={`relative w-full ${maxWidthStyles[maxWidth]} bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all max-h-[90vh] flex flex-col`}
+        className={`relative w-full ${maxWidthStyles[maxWidth]} bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all max-h-[90vh] flex flex-col overscroll-contain`}
       >
         {/* Header */}
         {(title || description) && (
-          <div className="flex items-start justify-between p-5 border-b border-slate-800/80 shrink-0">
+          <div className="flex items-start justify-between p-4 sm:p-5 border-b border-slate-800/80 shrink-0">
             <div>
               {title && <h3 className="text-base font-semibold text-white">{title}</h3>}
               {description && (
@@ -75,7 +76,7 @@ export function Modal({
         )}
 
         {/* Content */}
-        <div className="p-5 overflow-y-auto grow">{children}</div>
+        <div className="p-4 sm:p-5 overflow-y-auto grow overscroll-contain">{children}</div>
       </div>
     </div>
   );

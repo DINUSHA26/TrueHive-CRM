@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   FileText,
   Plus,
@@ -148,6 +149,9 @@ export function QuotationsView({
     amountPaid: number;
     balance: number;
   } | null>(null);
+
+  // Lock body scroll when quotation preview or invoice modal is open
+  useBodyScrollLock(Boolean(previewQuote || invoiceModalQuote));
 
   // Company Details (Matching User's LKpos Print Header)
   const [companyInfo, setCompanyInfo] = useState({
@@ -1157,10 +1161,10 @@ export function QuotationsView({
       {/* 3. PRINT PREVIEW MODAL (Matching Screenshot 1 & Enhanced for Scrolling) */}
       {/* ========================================================================= */}
       {previewQuote && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-3 sm:p-6 flex items-start justify-center">
-          <div className="relative w-full max-w-3xl bg-white text-slate-950 rounded-2xl shadow-2xl my-2 sm:my-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm p-2 sm:p-6 flex items-start justify-center overscroll-contain">
+          <div className="relative w-full max-w-3xl bg-white text-slate-950 rounded-2xl shadow-2xl my-2 sm:my-6 overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[92vh] overscroll-contain">
             {/* Sticky Modal Header Controls (Cannot scroll away, Always Visible) */}
-            <div className="sticky top-0 bg-white/95 backdrop-blur-md z-30 flex items-center justify-between px-5 sm:px-6 py-3.5 border-b border-slate-200 shrink-0 no-print shadow-sm">
+            <div className="sticky top-0 bg-white/95 backdrop-blur-md z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-4 sm:px-6 py-3 border-b border-slate-200 shrink-0 no-print shadow-sm">
               <div className="flex items-center gap-2.5">
                 <div className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
                   <FileText className="w-5 h-5" />
@@ -1175,7 +1179,7 @@ export function QuotationsView({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
                 <Button
                   variant="primary"
                   size="sm"
@@ -1298,24 +1302,26 @@ export function QuotationsView({
                   <h4 className="font-bold text-xs uppercase tracking-wider">OTHER / SERVICES</h4>
                 </div>
 
-                <table className="w-full text-left text-xs">
-                  <tbody className="divide-y divide-slate-100">
-                    {previewQuote.items.map((it, idx) => (
-                      <tr key={idx} className="py-1">
-                        <td className="py-1.5 w-8 font-bold">{idx + 1}.</td>
-                        <td className="py-1.5">
-                          <span className="font-medium text-slate-900">{it.description}</span>
-                          <span className="text-slate-500 text-[10px] ml-2">
-                            ({it.quantity} {it.unit || "Set"} @ Rs.{it.unitPrice.toLocaleString()})
-                          </span>
-                        </td>
-                        <td className="py-1.5 text-right font-bold text-slate-950">
-                          Rs.{it.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="w-full overflow-x-auto no-scrollbar">
+                  <table className="w-full min-w-[500px] text-left text-xs">
+                    <tbody className="divide-y divide-slate-100">
+                      {previewQuote.items.map((it, idx) => (
+                        <tr key={idx} className="py-1">
+                          <td className="py-1.5 w-8 font-bold">{idx + 1}.</td>
+                          <td className="py-1.5">
+                            <span className="font-medium text-slate-900">{it.description}</span>
+                            <span className="text-slate-500 text-[10px] ml-2">
+                              ({it.quantity} {it.unit || "Set"} @ Rs.{it.unitPrice.toLocaleString()})
+                            </span>
+                          </td>
+                          <td className="py-1.5 text-right font-bold text-slate-950">
+                            Rs.{it.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               {/* Bordered Total Box */}

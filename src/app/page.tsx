@@ -19,6 +19,7 @@ import { CustomerCreditView } from "@/components/views/CustomerCreditView";
 import { SupplierLedgerView } from "@/components/views/SupplierLedgerView";
 import { QuotationsView } from "@/components/views/QuotationsView";
 import { InvoiceManagementView } from "@/components/views/InvoiceManagementView";
+import { EmployeeManagementView } from "@/components/views/EmployeeManagementView";
 import { OfficialA4InvoiceModal } from "@/components/OfficialA4InvoiceModal";
 import type {
   ProductItem,
@@ -371,6 +372,18 @@ export default function TrueHiveWorkspace() {
 
       {activeNav === "SETTINGS" && (
         <SettingsView currentUser={currentUser} onRefresh={fetchAllData} />
+      )}
+
+      {(activeNav === "EMPLOYEES" || activeNav === "ATTENDANCE" || activeNav === "PAYROLL") && (
+        <EmployeeManagementView
+          defaultTab={
+            activeNav === "ATTENDANCE"
+              ? "ATTENDANCE"
+              : activeNav === "PAYROLL"
+              ? "PAYROLL"
+              : "DIRECTORY"
+          }
+        />
       )}
 
       {/* Global Official A4 Tax Invoice Modal */}

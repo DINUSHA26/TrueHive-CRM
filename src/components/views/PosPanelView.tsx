@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   ShoppingCart,
   ScanBarcode,
@@ -177,6 +178,9 @@ export function PosPanelView({
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [businessName, setBusinessName] = useState("Fashion dora");
+
+  // Lock body scroll when any POS modal is open
+  useBodyScrollLock(Boolean(viewingInvoice || cameraModalOpen || receiptModalOpen));
 
   // Fetch recent orders from backend
   const fetchRecentOrders = useCallback(async () => {
@@ -1227,8 +1231,8 @@ export function PosPanelView({
           </Button>
         </div>
 
-        <div className="overflow-x-auto min-w-[550px]">
-          <table className="w-full text-left text-xs">
+        <div className="w-full overflow-x-auto no-scrollbar">
+          <table className="w-full min-w-[550px] text-left text-xs">
             <thead>
               <tr className="border-b border-slate-800 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                 <th className="py-3 px-4">INV #</th>
@@ -1290,7 +1294,7 @@ export function PosPanelView({
 
       {/* INVOICE DETAILS MODAL (Customizable Thermal / A4 Receipt Layout with Fixed Cut Button & Header) */}
       {viewingInvoice && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-2 sm:p-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-2 sm:p-4 overflow-hidden overscroll-contain">
           <div
             className={`relative w-full ${
               receiptSettings.paperWidth === "58mm"
@@ -1298,7 +1302,7 @@ export function PosPanelView({
                 : receiptSettings.paperWidth === "A4"
                 ? "max-w-2xl"
                 : "max-w-md"
-            } max-h-[92vh] flex flex-col bg-white text-slate-950 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200`}
+            } max-h-[92vh] flex flex-col bg-white text-slate-950 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 overscroll-contain`}
           >
             {/* Modal Fixed Header - Cut (X) button ALWAYS visible at top */}
             <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white">

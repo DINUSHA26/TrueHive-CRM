@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   MessageSquare,
   Bot,
@@ -87,6 +88,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   const [simText, setSimText] = useState("");
   const [simulating, setSimulating] = useState(false);
   const [showSimModal, setShowSimModal] = useState(false);
+  useBodyScrollLock(showSimModal);
   const [mobileTab, setMobileTab] = useState<"CHATS" | "UPDATES" | "COMMUNITIES" | "AI_STUDIO">("CHATS");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);

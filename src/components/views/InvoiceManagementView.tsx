@@ -43,6 +43,8 @@ import type {
   InvoiceTypeEnum,
 } from "@/lib/store";
 import { convertNumberToWords } from "./QuotationsView";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { parseInvoiceItems } from "@/lib/invoiceUtils";
 
 interface Props {
   orders?: OrderRecord[];
@@ -411,6 +413,17 @@ export function InvoiceManagementView({
   const [paymentInvoice, setPaymentInvoice] = useState<InvoiceRecord | null>(null);
   const [voidInvoice, setVoidInvoice] = useState<InvoiceRecord | null>(null);
 
+  // Lock body scroll when any modal in InvoiceManagementView is open
+  const isAnyModalOpen = Boolean(
+    showCreateModal ||
+    viewInvoice ||
+    printA4Invoice ||
+    printThermalInvoice ||
+    paymentInvoice ||
+    voidInvoice
+  );
+  useBodyScrollLock(isAnyModalOpen);
+
   // Form State for Payment Modal
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
@@ -645,15 +658,7 @@ export function InvoiceManagementView({
             returnValue: 0,
             paymentMethod: "SUPPLIER_CREDIT",
             paymentStatus: status,
-            items: [
-              {
-                description: sb.items || `Supplier Purchase #${sbNum}`,
-                quantity: 1,
-                unit: "lot",
-                unitPrice: total,
-                totalPrice: total,
-              },
-            ],
+            items: parseInvoiceItems(sb.items, total, `Supplier Purchase #${sbNum}`),
             createdAt: sb.createdAt || new Date().toISOString(),
           });
           existingKeys.add(sbNum.toLowerCase());
@@ -1244,14 +1249,14 @@ export function InvoiceManagementView({
         </div>
 
         {/* Status & Category Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/60 mt-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-400 mr-1.5">Status:</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800/60 mt-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 whitespace-nowrap">
+            <span className="text-xs font-semibold text-slate-400 mr-1.5 shrink-0">Status:</span>
             {["ALL", "PAID", "PARTIAL", "UNPAID", "VOID", "DRAFT"].map((st) => (
               <button
                 key={st}
                 onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                   statusFilter === st
                     ? "bg-blue-600 text-white shadow-sm"
                     : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
@@ -1262,8 +1267,8 @@ export function InvoiceManagementView({
             ))}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold text-slate-400 mr-1.5">Category:</span>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-full pb-1 whitespace-nowrap">
+            <span className="text-xs font-semibold text-slate-400 mr-1.5 shrink-0">Category:</span>
             {[
               { id: "ALL", label: "All Records" },
               { id: "SALES", label: "Sales & POS Invoices" },
@@ -1272,7 +1277,7 @@ export function InvoiceManagementView({
               <button
                 key={tp.id}
                 onClick={() => setTypeFilter(tp.id)}
-                className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                className={`shrink-0 px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                   typeFilter === tp.id
                     ? "bg-purple-600 text-white shadow-sm"
                     : "bg-slate-950 text-slate-400 hover:text-white border border-slate-800"
@@ -1287,8 +1292,8 @@ export function InvoiceManagementView({
 
       {/* Invoices Table (LKpos UI Reference Page 2) */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className="w-full overflow-x-auto no-scrollbar">
+          <table className="w-full min-w-[950px] text-left text-sm">
             <thead className="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
               <tr>
                 <th className="py-3.5 px-3 w-10 text-center">
@@ -1509,12 +1514,12 @@ export function InvoiceManagementView({
       {/* 1. VIEW INVOICE DETAILS MODAL */}
       {/* ========================================================= */}
       {viewInvoice && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl my-8">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-4 sm:p-6 space-y-4 sm:space-y-5 shadow-2xl my-4 sm:my-8 overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <Receipt className="w-5 h-5 text-blue-400" />
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-base sm:text-lg font-bold text-white">
                   Invoice {viewInvoice.invoiceNumber}
                 </h3>
                 <span
@@ -1567,32 +1572,34 @@ export function InvoiceManagementView({
 
             {/* Items */}
             <div className="border border-slate-800 rounded-xl overflow-hidden">
-              <table className="w-full text-xs text-left">
-                <thead className="bg-slate-950 text-slate-400 uppercase font-bold text-[10px]">
-                  <tr>
-                    <th className="p-2.5">Item Description</th>
-                    <th className="p-2.5 text-center">Unit</th>
-                    <th className="p-2.5 text-center">Qty</th>
-                    <th className="p-2.5 text-right">Unit Price</th>
-                    <th className="p-2.5 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800 font-mono text-slate-300">
-                  {viewInvoice.items.map((it, idx) => (
-                    <tr key={idx}>
-                      <td className="p-2.5 font-sans font-medium text-white">
-                        {it.description}
-                      </td>
-                      <td className="p-2.5 text-center">{it.unit || "Pcs"}</td>
-                      <td className="p-2.5 text-center">{it.quantity}</td>
-                      <td className="p-2.5 text-right">{it.unitPrice.toFixed(2)}</td>
-                      <td className="p-2.5 text-right font-bold text-white">
-                        {it.totalPrice.toFixed(2)}
-                      </td>
+              <div className="w-full overflow-x-auto no-scrollbar">
+                <table className="w-full min-w-[500px] text-xs text-left">
+                  <thead className="bg-slate-950 text-slate-400 uppercase font-bold text-[10px]">
+                    <tr>
+                      <th className="p-2.5">Item Description</th>
+                      <th className="p-2.5 text-center">Unit</th>
+                      <th className="p-2.5 text-center">Qty</th>
+                      <th className="p-2.5 text-right">Unit Price</th>
+                      <th className="p-2.5 text-right">Total</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 font-mono text-slate-300">
+                    {parseInvoiceItems(viewInvoice.items).map((it, idx) => (
+                      <tr key={idx}>
+                        <td className="p-2.5 font-sans font-medium text-white">
+                          {it.description}
+                        </td>
+                        <td className="p-2.5 text-center">{it.unit || "Pcs"}</td>
+                        <td className="p-2.5 text-center">{it.quantity}</td>
+                        <td className="p-2.5 text-right">{it.unitPrice.toFixed(2)}</td>
+                        <td className="p-2.5 text-right font-bold text-white">
+                          {it.totalPrice.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             {/* Financials */}
@@ -1907,15 +1914,15 @@ function A4InvoicePrintModal({
   const amountInWords = convertNumberToWords(invoice.totalAmount);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-4 sm:my-8 overscroll-contain">
         {/* Top Header Buttons */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 no-print">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-800 pb-3 no-print">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <FileText className="w-4 h-4 text-blue-400" />
             Official A4 Tax & Commercial Invoice ({invoice.invoiceNumber})
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
             <button
               onClick={handleDownloadPdf}
               className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md"
@@ -1940,7 +1947,7 @@ function A4InvoicePrintModal({
         {/* Printable A4 Sheet Layout */}
         <div
           ref={invoiceRef}
-          className="bg-white text-slate-900 p-8 sm:p-10 rounded-xl shadow-lg border border-slate-200 font-sans space-y-6 text-sm"
+          className="bg-white text-slate-900 p-4 sm:p-8 rounded-xl shadow-lg border border-slate-200 font-sans space-y-6 text-sm"
         >
           {/* Header Row */}
           <div className="flex justify-between items-start border-b border-slate-200 pb-6">
@@ -1995,7 +2002,7 @@ function A4InvoicePrintModal({
           </div>
 
           {/* Bill To Section */}
-          <div className="grid grid-cols-2 gap-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 bg-slate-50 p-4 rounded-lg border border-slate-200">
             <div>
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 {invoice.type === "PURCHASE_PO" ? "SUPPLIER / VENDOR DETAILS" : "INVOICE TO (CLIENT)"}
@@ -2012,7 +2019,7 @@ function A4InvoicePrintModal({
               )}
             </div>
 
-            <div className="text-right">
+            <div className="sm:text-right">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
                 PAYMENT TERMS & METHOD
               </span>
@@ -2030,42 +2037,44 @@ function A4InvoicePrintModal({
 
           {/* Line Items Table */}
           <div className="border border-slate-200 rounded-lg overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
-                <tr>
-                  <th className="py-2.5 px-3 w-8 text-center">#</th>
-                  <th className="py-2.5 px-3">Item Description</th>
-                  <th className="py-2.5 px-3 text-center">Unit</th>
-                  <th className="py-2.5 px-3 text-center">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Unit Price</th>
-                  <th className="py-2.5 px-3 text-right">Offers / Disc</th>
-                  <th className="py-2.5 px-3 text-right">Total (LKR)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200 font-mono">
-                {invoice.items.map((it, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-3 text-center text-slate-500">{idx + 1}</td>
-                    <td className="py-2.5 px-3 font-sans font-semibold text-slate-900">
-                      {it.description}
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-slate-600 font-sans">
-                      {it.unit || "Pcs"}
-                    </td>
-                    <td className="py-2.5 px-3 text-center text-slate-900">{it.quantity}</td>
-                    <td className="py-2.5 px-3 text-right text-slate-700">
-                      {it.unitPrice.toFixed(2)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-slate-500">
-                      {(it.discount || 0).toFixed(2)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-bold text-slate-900">
-                      {it.totalPrice.toFixed(2)}
-                    </td>
+            <div className="w-full overflow-x-auto no-scrollbar">
+              <table className="w-full min-w-[600px] text-left text-xs">
+                <thead className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2.5 px-3 w-8 text-center">#</th>
+                    <th className="py-2.5 px-3">Item Description</th>
+                    <th className="py-2.5 px-3 text-center">Unit</th>
+                    <th className="py-2.5 px-3 text-center">Qty</th>
+                    <th className="py-2.5 px-3 text-right">Unit Price</th>
+                    <th className="py-2.5 px-3 text-right">Offers / Disc</th>
+                    <th className="py-2.5 px-3 text-right">Total (LKR)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-mono">
+                  {parseInvoiceItems(invoice.items).map((it, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-2.5 px-3 text-center text-slate-500">{idx + 1}</td>
+                      <td className="py-2.5 px-3 font-sans font-semibold text-slate-900">
+                        {it.description}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-600 font-sans">
+                        {it.unit || "Pcs"}
+                      </td>
+                      <td className="py-2.5 px-3 text-center text-slate-900">{it.quantity}</td>
+                      <td className="py-2.5 px-3 text-right text-slate-700">
+                        {it.unitPrice.toFixed(2)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-slate-500">
+                        {(it.discount || 0).toFixed(2)}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                        {it.totalPrice.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Financial Breakdown & Totals */}
@@ -2162,8 +2171,8 @@ function ThermalReceiptModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 space-y-4 shadow-2xl my-8">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+      <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 space-y-4 shadow-2xl my-4 sm:my-8 overscroll-contain">
         <div className="flex items-center justify-between border-b border-slate-800 pb-2.5 no-print">
           <div className="flex items-center gap-2 text-sm font-bold text-white">
             <Printer className="w-4 h-4 text-emerald-400" />
@@ -2228,7 +2237,7 @@ function ThermalReceiptModal({
 
           {/* Items List */}
           <div className="space-y-1.5 text-[11px]">
-            {invoice.items.map((it, idx) => (
+            {parseInvoiceItems(invoice.items).map((it, idx) => (
               <div key={idx} className="grid grid-cols-12 gap-1">
                 <span className="col-span-6 truncate font-medium">{it.description}</span>
                 <span className="col-span-2 text-center">{it.quantity}</span>

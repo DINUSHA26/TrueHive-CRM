@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Camera, X, ScanBarcode, Check, AlertCircle } from "lucide-react";
 import { BrowserMultiFormatReader } from "@zxing/library";
 import type { ProductItem } from "@/lib/store";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 interface Props {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function CameraBarcodeScannerModal({ isOpen, onClose, onDetected, products }: Props) {
+  useBodyScrollLock(isOpen);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [manualInput, setManualInput] = useState<string>("");
@@ -110,8 +112,8 @@ export function CameraBarcodeScannerModal({ isOpen, onClose, onDetected, product
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#111827] border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overscroll-contain">
+      <div className="bg-[#111827] border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl overscroll-contain">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <div className="flex items-center gap-2 text-sm font-bold text-white">

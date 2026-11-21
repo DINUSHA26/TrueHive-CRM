@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import {
   Users,
   CalendarCheck,
@@ -176,6 +177,16 @@ export function EmployeeManagementView({
 
   // Individual Payslip Modal
   const [payslipEmployee, setPayslipEmployee] = useState<SalarySheetRow | null>(null);
+
+  // Lock body scroll when any modal is open
+  const isAnyModalOpen = Boolean(
+    showEmployeeModal ||
+    showAdvanceModal ||
+    showAttendanceReportModal ||
+    showSalaryReportModal ||
+    payslipEmployee
+  );
+  useBodyScrollLock(isAnyModalOpen);
 
   // Print ref
   const reportPrintRef = useRef<HTMLDivElement | null>(null);
@@ -881,10 +892,10 @@ export function EmployeeManagementView({
       </div>
 
       {/* Main 3 LKpos Tabs (Page 2, 4, 6 in Report) */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto no-scrollbar whitespace-nowrap">
         <button
           onClick={() => setActiveTab("DIRECTORY")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
             activeTab === "DIRECTORY"
               ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
               : "text-slate-400 hover:text-white hover:bg-slate-800/60"
@@ -896,7 +907,7 @@ export function EmployeeManagementView({
 
         <button
           onClick={() => setActiveTab("ATTENDANCE")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
             activeTab === "ATTENDANCE"
               ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
               : "text-slate-400 hover:text-white hover:bg-slate-800/60"
@@ -908,7 +919,7 @@ export function EmployeeManagementView({
 
         <button
           onClick={() => setActiveTab("PAYROLL")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+          className={`shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
             activeTab === "PAYROLL"
               ? "bg-blue-600 text-white shadow-md shadow-blue-600/20"
               : "text-slate-400 hover:text-white hover:bg-slate-800/60"
@@ -957,8 +968,8 @@ export function EmployeeManagementView({
 
           {/* Employee Directory Table */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <div className="w-full overflow-x-auto no-scrollbar">
+              <table className="w-full min-w-[850px] text-left text-sm">
                 <thead className="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="py-3.5 px-4 font-bold text-slate-300">EMP ID</th>
@@ -1156,8 +1167,8 @@ export function EmployeeManagementView({
 
           {/* Daily Attendance Table */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+            <div className="w-full overflow-x-auto no-scrollbar">
+              <table className="w-full min-w-[650px] text-left text-sm">
                 <thead className="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="py-3.5 px-4 font-bold text-slate-300 w-24">EMP ID</th>
@@ -1329,8 +1340,8 @@ export function EmployeeManagementView({
 
             {/* Salary Sheet Table */}
             <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-xl">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
+              <div className="w-full overflow-x-auto no-scrollbar">
+                <table className="w-full min-w-[950px] text-left text-sm">
                   <thead className="bg-slate-950/80 border-b border-slate-800 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     <tr>
                       <th className="py-3 px-3 font-bold text-slate-300">EMP ID</th>
@@ -1825,13 +1836,13 @@ export function EmployeeManagementView({
       {/* 3. MONTHLY ATTENDANCE REPORT PREVIEW MODAL (LKpos Page 5) */}
       {/* ========================================================================= */}
       {showAttendanceReportModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl my-8">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-4 sm:my-8 overscroll-contain">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <Printer className="w-5 h-5 text-blue-400" /> Attendance Report Preview
               </h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
                 <Button
                   size="sm"
                   onClick={() => window.print()}
@@ -1851,7 +1862,7 @@ export function EmployeeManagementView({
             {/* Printable Sheet */}
             <div
               ref={reportPrintRef}
-              className="bg-white text-slate-950 p-8 rounded-xl shadow-inner font-sans space-y-5"
+              className="bg-white text-slate-950 p-4 sm:p-8 rounded-xl shadow-inner font-sans space-y-5"
             >
               {/* Header */}
               <div className="text-center space-y-1 border-b border-slate-200 pb-4">
@@ -1867,7 +1878,8 @@ export function EmployeeManagementView({
               </div>
 
               {/* Report Table */}
-              <table className="w-full text-xs text-left border-collapse border border-slate-300">
+              <div className="w-full overflow-x-auto no-scrollbar">
+                <table className="w-full min-w-[650px] text-xs text-left border-collapse border border-slate-300">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-300">
                     <th className="p-2 border-r border-slate-300">EMP ID</th>
@@ -1895,6 +1907,7 @@ export function EmployeeManagementView({
                   ))}
                 </tbody>
               </table>
+            </div>
 
               <div className="pt-8 flex justify-between text-xs text-slate-500">
                 <div>Authorized Signature: ________________________</div>
@@ -1909,13 +1922,13 @@ export function EmployeeManagementView({
       {/* 4. MONTHLY SALARY SHEET REPORT PREVIEW MODAL (LKpos Page 9) */}
       {/* ========================================================================= */}
       {showSalaryReportModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-5xl w-full p-6 space-y-4 shadow-2xl my-8">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-5xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-4 sm:my-8 overscroll-contain">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
                 <Printer className="w-5 h-5 text-blue-400" /> Monthly Salary Sheet Report
               </h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
                 <Button
                   size="sm"
                   onClick={() => window.print()}
@@ -1933,7 +1946,7 @@ export function EmployeeManagementView({
             </div>
 
             {/* Printable Sheet */}
-            <div className="bg-white text-slate-950 p-8 rounded-xl shadow-inner font-sans space-y-5 text-xs">
+            <div className="bg-white text-slate-950 p-4 sm:p-8 rounded-xl shadow-inner font-sans space-y-5 text-xs">
               {/* Header */}
               <div className="text-center space-y-1 border-b border-slate-200 pb-4">
                 <h2 className="text-2xl font-black tracking-tight">Fashion dora</h2>
@@ -1948,7 +1961,8 @@ export function EmployeeManagementView({
               </div>
 
               {/* Table */}
-              <table className="w-full text-[11px] text-left border-collapse border border-slate-300">
+              <div className="w-full overflow-x-auto no-scrollbar">
+                <table className="w-full min-w-[950px] text-[11px] text-left border-collapse border border-slate-300">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[9px] border-b border-slate-300">
                     <th className="p-1.5 border-r border-slate-300">EMP ID</th>
@@ -2026,6 +2040,7 @@ export function EmployeeManagementView({
                   </tr>
                 </tbody>
               </table>
+            </div>
 
               <div className="pt-8 flex justify-between text-xs text-slate-500">
                 <div>Prepared by: ________________________</div>
