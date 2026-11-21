@@ -22,6 +22,10 @@ import {
   RefreshCw,
   X,
   ShieldCheck,
+  FileText,
+  FileSpreadsheet,
+  FileImage,
+  File as FileIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -37,6 +41,32 @@ interface WhatsAppChatViewProps {
 
 type FilterChip = "ALL" | "UNREAD" | "AI_ACTIVE" | "HUMAN_AGENT";
 type MobileScreen = "LIST" | "CHAT";
+
+const EMOJI_CATEGORIES = [
+  {
+    name: "Smileys",
+    emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "😂", "🤣", "😊", "😇", "🙂", "😉", "😌", "😍", "🥰", "😘", "😋", "😎", "🤩", "🥳", "😏", "🤗", "🤔", "🤫", "🤐", "😐"],
+  },
+  {
+    name: "Gestures",
+    emojis: ["👍", "👎", "👌", "✌️", "🤞", "👏", "🙌", "🙏", "🤝", "💪", "👈", "👉", "👆", "👇", "✍️", "👋"],
+  },
+  {
+    name: "Business & Orders",
+    emojis: ["📦", "💰", "🧾", "🛒", "💳", "🏷️", "🚚", "🛵", "🏢", "📍", "📞", "✉️", "📅", "⏰", "💼", "💵", "🎁", "🛍️"],
+  },
+  {
+    name: "Status & Symbols",
+    emojis: ["✅", "❌", "⚠️", "ℹ️", "🔔", "⭐", "💡", "💯", "🔥", "❤️", "💙", "💚", "🎉", "✨", "🚀"],
+  },
+];
+
+interface AttachedFileInfo {
+  name: string;
+  size: string;
+  type: "image" | "pdf" | "word" | "excel" | "other";
+  dataUrl?: string;
+}
 
 /**
  * WhatsApp Delivery & Read Status Ticks Component
@@ -90,6 +120,9 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   const [showSimModal, setShowSimModal] = useState(false);
   useBodyScrollLock(showSimModal);
   const [mobileTab, setMobileTab] = useState<"CHATS" | "UPDATES" | "COMMUNITIES" | "AI_STUDIO">("CHATS");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<AttachedFileInfo | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -229,9 +262,119 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     }
   };
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    let fileType: AttachedFileInfo["type"] = "other";
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (file.type.startsWith("image/") || ["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) {
+      fileType = "image";
+    } else if (ext === "pdf" || file.type.includes("pdf")) {
+      fileType = "pdf";
+    } else if (
+      ["doc", "docx"].includes(ext) ||
+      file.type.includes("word") ||
+      file.type.includes("officedocument.wordprocessingml")
+    ) {
+      fileType = "word";
+    } else if (
+      ["xls", "xlsx", "csv"].includes(ext) ||
+      file.type.includes("excel") ||
+      file.type.includes("officedocument.spreadsheetml")
+    ) {
+      fileType = "excel";
+    }
+
+    const formattedSize =
+      file.size < 1024 * 1024
+        ? `${Math.round(file.size / 1024)} KB`
+        : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+
+    if (fileType === "image") {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAttachedFile({
+          name: file.name,
+          size: formattedSize,
+          type: "image",
+          dataUrl: reader.result as string,
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setAttachedFile({
+        name: file.name,
+        size: formattedSize,
+        type: fileType,
+      });
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const getFileIcon = (type: AttachedFileInfo["type"]) => {
+    switch (type) {
+      case "image":
+        return <FileImage className="w-5 h-5 text-emerald-400 shrink-0" />;
+      case "pdf":
+        return <FileText className="w-5 h-5 text-rose-400 shrink-0" />;
+      case "word":
+        return <FileText className="w-5 h-5 text-blue-400 shrink-0" />;
+      case "excel":
+        return <FileSpreadsheet className="w-5 h-5 text-emerald-400 shrink-0" />;
+      default:
+        return <FileIcon className="w-5 h-5 text-slate-300 shrink-0" />;
+    }
+  };
+
+  const renderMessageContent = (content: string) => {
+    if (content.startsWith("📎 [") && content.includes("]")) {
+      const endBracket = content.indexOf("]");
+      const attachInfo = content.slice(3, endBracket); // e.g. "PDF: invoice.pdf (124 KB)"
+      const remainingText = content.slice(endBracket + 1).trim();
+
+      const isImg = attachInfo.startsWith("IMAGE:");
+      const isPdf = attachInfo.startsWith("PDF:");
+      const isXls = attachInfo.startsWith("EXCEL:");
+      const isDoc = attachInfo.startsWith("WORD:");
+
+      return (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-black/30 border border-white/10 text-xs shadow-inner">
+            {isImg && <FileImage className="w-5 h-5 text-emerald-400 shrink-0" />}
+            {isPdf && <FileText className="w-5 h-5 text-rose-400 shrink-0" />}
+            {isXls && <FileSpreadsheet className="w-5 h-5 text-emerald-400 shrink-0" />}
+            {isDoc && <FileText className="w-5 h-5 text-blue-400 shrink-0" />}
+            {!isImg && !isPdf && !isXls && !isDoc && <Paperclip className="w-5 h-5 text-slate-300 shrink-0" />}
+            <span className="font-semibold text-white/95 truncate">{attachInfo}</span>
+          </div>
+          {remainingText && <p className="whitespace-pre-wrap leading-relaxed">{remainingText}</p>}
+        </div>
+      );
+    }
+    return <p className="whitespace-pre-wrap leading-relaxed">{content}</p>;
+  };
+
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim() || !activeChat) return;
+    const textToSend = replyText.trim();
+    if (!textToSend && !attachedFile) return;
+    if (!activeChat) return;
+
+    // Build composite content if file is attached
+    let messageContent = textToSend;
+    if (attachedFile) {
+      const attachLabel = `📎 [${attachedFile.type.toUpperCase()}: ${attachedFile.name} (${attachedFile.size})]`;
+      messageContent = textToSend ? `${attachLabel}\n${textToSend}` : attachLabel;
+    }
+
+    // Reset draft state
+    setReplyText("");
+    setAttachedFile(null);
+    setShowEmojiPicker(false);
 
     // Requirement: When AI is active, staff replying must switch to Staff Mode!
     if (activeChat.isAiActive) {
@@ -251,16 +394,13 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
       }
     }
 
-    const messageText = replyText.trim();
-    setReplyText("");
-
     // Optimistically show message immediately with 1 Grey Tick (SENT)
     const optimisticMessage = {
       id: `local-${Date.now()}`,
       direction: "OUTBOUND" as const,
       senderType: "HUMAN_AGENT" as const,
-      messageType: "TEXT" as const,
-      content: messageText,
+      messageType: (attachedFile?.type === "image" ? "IMAGE" : "TEXT") as "IMAGE" | "TEXT",
+      content: messageContent,
       timestamp: new Date().toLocaleTimeString("en-US", {
         timeZone: "Asia/Colombo",
         hour: "2-digit",
@@ -273,7 +413,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     if (activeChat.messages) {
       activeChat.messages.push(optimisticMessage);
     }
-    activeChat.lastMessageText = messageText;
+    activeChat.lastMessageText = messageContent;
     activeChat.lastMessageAt = optimisticMessage.timestamp;
     activeChat.unreadCount = 0;
     if (onMarkAsRead) {
@@ -287,7 +427,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
         body: JSON.stringify({
           action: "SEND_REPLY",
           chatId: activeChat.id,
-          text: messageText,
+          text: messageContent,
         }),
       });
 
@@ -342,6 +482,15 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
 
   return (
     <div className="w-full flex flex-col space-y-3">
+      {/* Hidden File Input for Attachments (Images, PDF, Excel, Word) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       {/* ========================================================
           DESKTOP & TABLET TOP BANNER: CLOUD API STATUS & GEMINI STATS
           ======================================================== */}
@@ -385,35 +534,20 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
             ======================================================== */}
         {mobileScreen === "LIST" && (
           <div className="w-full bg-[#0b141a] text-slate-100 rounded-2xl overflow-hidden border border-slate-800 shadow-2xl flex flex-col min-h-[640px] max-h-[86vh]">
-            {/* Top Desktop Feature Sync Banner on Mobile */}
-            <div className="px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Cloud API Live</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-full font-bold">
-                  Gemini Loop
-                </span>
-                <button
-                  onClick={onRefresh}
-                  className="text-slate-400 hover:text-white p-1"
-                  title="Refresh Chats"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Top WhatsApp Mobile App Bar (Camera removed per instruction) */}
-            <div className="px-4 pt-3 pb-2 bg-[#0b141a] flex items-center justify-between border-b border-[#202c33]/60">
+            {/* Top WhatsApp Mobile App Bar */}
+            <div className="px-4 pt-3 pb-2.5 bg-[#0b141a] flex items-center justify-between border-b border-[#202c33]/60">
               <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <span>WhatsApp</span>
                 <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse inline-block" />
               </h1>
-              <div className="flex items-center gap-3 text-[#8696a0]">
-                <button type="button" className="p-1 hover:text-white transition">
-                  <MoreVertical className="w-5 h-5" />
+              <div className="flex items-center gap-2 text-[#8696a0]">
+                <button
+                  type="button"
+                  onClick={onRefresh}
+                  className="p-1.5 rounded-full hover:bg-[#202c33] text-[#8696a0] hover:text-white transition"
+                  title="Refresh Chats"
+                >
+                  <RefreshCw className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -478,15 +612,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               >
                 Staff Mode
               </button>
-            </div>
-
-            {/* Archived Header Row */}
-            <div className="px-4 py-2 flex items-center justify-between text-xs text-[#8696a0] border-b border-[#202c33]/30">
-              <div className="flex items-center gap-3">
-                <Archive className="w-4 h-4 text-[#8696a0]" />
-                <span className="font-semibold text-white">Archived</span>
-              </div>
-              <span className="text-[11px] text-[#25D366] font-bold">Live Sync</span>
             </div>
 
             {/* Mobile Chat List Rows */}
@@ -640,7 +765,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                 </div>
               </div>
 
-              {/* Header Right Actions (Camera & Calls removed) */}
+              {/* Header Right Actions */}
               <div className="flex items-center gap-2 shrink-0">
                 {/* Handover Toggle Pill */}
                 <button
@@ -664,11 +789,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                       <span>Staff Mode</span>
                     </>
                   )}
-                </button>
-
-
-                <button type="button" className="p-1 text-[#8696a0] hover:text-white">
-                  <MoreVertical className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -717,7 +837,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                       )}
 
                       {/* Content */}
-                      <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                      {renderMessageContent(msg.content)}
 
                       {/* Timestamp & Accurate WhatsApp Delivery / Read Ticks */}
                       <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-[#8696a0] select-none">
@@ -753,33 +873,126 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
               </div>
             )}
 
-            {/* Bottom WhatsApp Input Bar (Camera removed per instruction) */}
-            <div className="p-2 bg-[#1f2c34] border-t border-[#202c33] flex items-center gap-2 shrink-0 sticky bottom-0 z-30">
-              <div className="flex-1 flex items-center bg-[#2a3942] rounded-full px-3 py-1.5 gap-2">
-                <button type="button" className="text-[#8696a0] hover:text-white transition">
-                  <Smile className="w-5 h-5" />
+            {/* Attachment Preview Chip */}
+            {attachedFile && (
+              <div className="px-3 py-2 bg-[#182229] border-t border-[#202c33] flex items-center justify-between text-xs text-white shrink-0 animate-fade-in">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {attachedFile.dataUrl ? (
+                    <img
+                      src={attachedFile.dataUrl}
+                      alt="attachment preview"
+                      className="w-10 h-10 rounded-lg object-cover border border-[#2a3942]"
+                    />
+                  ) : (
+                    <div className="p-2 rounded-xl bg-[#202c33]">
+                      {getFileIcon(attachedFile.type)}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="font-semibold text-xs text-white truncate max-w-[200px] sm:max-w-xs">{attachedFile.name}</p>
+                    <span className="text-[10px] text-[#8696a0] font-mono">{attachedFile.size}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedFile(null)}
+                  className="p-1.5 rounded-full hover:bg-[#202c33] text-[#8696a0] hover:text-white transition"
+                  title="Remove attachment"
+                >
+                  <X className="w-4 h-4" />
                 </button>
-                <form onSubmit={handleSendReply} className="flex-1">
+              </div>
+            )}
+
+            {/* Emoji Drawer Popover */}
+            {showEmojiPicker && (
+              <div className="bg-[#1f2c34] border-t border-[#202c33] p-3 max-h-56 overflow-y-auto custom-scrollbar shrink-0 animate-fade-in shadow-2xl">
+                <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-[#2a3942] text-xs">
+                  <span className="text-[11px] font-bold text-[#8696a0] uppercase tracking-wider">
+                    Insert Emoji
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(false)}
+                    className="text-[#8696a0] hover:text-white p-1 rounded-full hover:bg-[#2a3942]"
+                    title="Close Emojis"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {EMOJI_CATEGORIES.map((cat) => (
+                    <div key={cat.name}>
+                      <span className="text-[10px] text-[#8696a0] font-semibold block mb-1">
+                        {cat.name}
+                      </span>
+                      <div className="grid grid-cols-8 gap-1.5 text-2xl">
+                        {cat.emojis.map((emoji) => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => {
+                              setReplyText((prev) => prev + emoji);
+                            }}
+                            className="p-1.5 rounded-lg hover:bg-[#2a3942] transition active:scale-125 flex items-center justify-center text-center select-none"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bottom WhatsApp Input Bar (Larger input, emojis, file attachments) */}
+            <div className="p-2.5 sm:p-3 bg-[#1f2c34] border-t border-[#202c33] flex items-center gap-2 shrink-0 sticky bottom-0 z-30">
+              <div className="flex-1 flex items-center bg-[#2a3942] rounded-3xl px-3 py-1.5 sm:py-2 gap-2 shadow-inner">
+                {/* Emoji toggle button */}
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
+                  className={`p-1.5 rounded-full transition ${
+                    showEmojiPicker ? "text-[#25D366] bg-[#103629]" : "text-[#8696a0] hover:text-white"
+                  }`}
+                  title="Emoji"
+                >
+                  <Smile className="w-6 h-6" />
+                </button>
+
+                {/* File attachment trigger button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`p-1.5 rounded-full transition ${
+                    attachedFile ? "text-emerald-400 bg-emerald-500/20" : "text-[#8696a0] hover:text-white"
+                  }`}
+                  title="Attach file (Images, PDF, Excel, Word)"
+                >
+                  <Paperclip className="w-5 h-5" />
+                </button>
+
+                {/* Large Input Field */}
+                <form onSubmit={handleSendReply} className="flex-1 min-w-0">
                   <input
                     type="text"
                     placeholder="Message"
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    className="w-full bg-transparent text-xs text-white placeholder-[#8696a0] focus:outline-none"
+                    className="w-full bg-transparent text-sm sm:text-base text-white placeholder-[#8696a0] focus:outline-none py-1.5"
                   />
                 </form>
-                <button type="button" className="text-[#8696a0] hover:text-white transition">
-                  <Paperclip className="w-4 h-4" />
-                </button>
               </div>
 
               {/* Round Green Send Button */}
               <button
                 type="button"
                 onClick={(e) => handleSendReply(e as any)}
-                className="w-10 h-10 rounded-full bg-[#00a884] hover:bg-[#00c59b] text-white flex items-center justify-center shrink-0 shadow-lg transition active:scale-95"
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-[#00a884] hover:bg-[#00c59b] text-white flex items-center justify-center shrink-0 shadow-lg transition active:scale-95"
+                title="Send Message"
               >
-                <Send className="w-4 h-4 translate-x-0.5" />
+                <Send className="w-5 h-5 translate-x-0.5" />
               </button>
             </div>
           </div>
@@ -1044,7 +1257,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                         </div>
 
                         {/* Content */}
-                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                        {renderMessageContent(msg.content)}
 
                         {/* WhatsApp Delivery / Read Ticks for outbound messages */}
                         {!isCustomer && (
@@ -1083,9 +1296,54 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
 
               {/* Bottom Reply Form & Simulation Controls placed cleanly underneath */}
               <div className="p-3 border-t border-slate-800 space-y-2 shrink-0 bg-slate-950/60">
+                {/* Desktop Attachment Preview Chip */}
+                {attachedFile && (
+                  <div className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between text-xs text-white">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {attachedFile.dataUrl ? (
+                        <img
+                          src={attachedFile.dataUrl}
+                          alt="preview"
+                          className="w-7 h-7 rounded-lg object-cover border border-slate-700"
+                        />
+                      ) : (
+                        getFileIcon(attachedFile.type)
+                      )}
+                      <span className="font-semibold truncate max-w-[240px]">{attachedFile.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">({attachedFile.size})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedFile(null)}
+                      className="text-slate-400 hover:text-white p-1"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
                 <form onSubmit={handleSendReply} className="flex items-center gap-2">
                   <div className="flex-1 flex items-center bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 gap-2">
-                    <Paperclip className="w-4 h-4 text-slate-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker((prev) => !prev)}
+                      className={`p-0.5 rounded transition ${
+                        showEmojiPicker ? "text-emerald-400" : "text-slate-400 hover:text-white"
+                      }`}
+                      title="Emojis"
+                    >
+                      <Smile className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`p-0.5 rounded transition ${
+                        attachedFile ? "text-emerald-400" : "text-slate-400 hover:text-white"
+                      }`}
+                      title="Attach file (Images, PDF, Excel, Word)"
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
                     <input
                       type="text"
                       placeholder="Type official WhatsApp reply to customer..."
