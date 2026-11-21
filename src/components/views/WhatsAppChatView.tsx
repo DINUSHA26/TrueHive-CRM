@@ -1362,29 +1362,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                     Send
                   </Button>
                 </form>
-
-                {/* Simulate incoming customer message right under the relevant section */}
-                <div className="flex items-center gap-2 pt-1 border-t border-slate-800/60">
-                  <span className="text-[10px] text-slate-500 font-bold shrink-0 uppercase tracking-wider">
-                    Test Loop:
-                  </span>
-                  <input
-                    type="text"
-                    placeholder="Simulate customer WhatsApp message (triggers Gemini Loop)..."
-                    value={simText}
-                    onChange={(e) => setSimText(e.target.value)}
-                    className="flex-1 px-2.5 py-1.5 bg-slate-950 border border-slate-800/80 rounded-lg text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500"
-                  />
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    loading={simulating}
-                    onClick={() => handleSimulateIncoming()}
-                    className="text-xs"
-                  >
-                    Simulate
-                  </Button>
-                </div>
               </div>
             </>
           )}
