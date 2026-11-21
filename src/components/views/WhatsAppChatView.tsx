@@ -122,6 +122,7 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   const [mobileTab, setMobileTab] = useState<"CHATS" | "UPDATES" | "COMMUNITIES" | "AI_STUDIO">("CHATS");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachedFile, setAttachedFile] = useState<AttachedFileInfo | null>(null);
+  const [typingChatIds, setTypingChatIds] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -151,6 +152,23 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   });
 
   const activeChat = chats.find((c) => c.id === selectedChatId) || filteredChats[0] || chats[0];
+  const lastMsgInActive = activeChat?.messages?.[activeChat.messages.length - 1];
+
+  // Auto-show "typing..." bubble in the message display area whenever a new INBOUND message is being processed by AI
+  useEffect(() => {
+    if (!activeChat) return;
+    if (lastMsgInActive?.direction === "INBOUND" && activeChat.isAiActive) {
+      setTypingChatIds((prev) => ({ ...prev, [activeChat.id]: true }));
+      const timer = setTimeout(() => {
+        setTypingChatIds((prev) => ({ ...prev, [activeChat.id]: false }));
+      }, 10000);
+      return () => clearTimeout(timer);
+    } else if (lastMsgInActive?.direction === "OUTBOUND") {
+      setTypingChatIds((prev) =>
+        prev[activeChat.id] ? { ...prev, [activeChat.id]: false } : prev
+      );
+    }
+  }, [activeChat?.id, activeChat?.isAiActive, lastMsgInActive?.id, lastMsgInActive?.direction]);
 
   // Browser / Phone Back Button Support:
   // When inside mobile chat screen, pressing hardware back or browser back returns to LIST instead of home!
@@ -222,12 +240,32 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
     if (pusher) {
       const channel = pusher.subscribe(CHANNELS.LIVE_CHAT);
       channel.bind("message-received", (data: any) => {
+        if (data?.chatRoomId && data.isAiActive !== false) {
+          setTypingChatIds((prev) => ({ ...prev, [data.chatRoomId]: true }));
+          setTimeout(() => {
+            setTypingChatIds((prev) => ({ ...prev, [data.chatRoomId]: false }));
+          }, 12000);
+        }
         onRefresh();
         if (data?.chatRoomId && data.chatRoomId === selectedChatId) {
           markAsRead(data.chatRoomId);
         }
       });
-      channel.bind("message-sent", () => onRefresh());
+      channel.bind("ai-typing", (data: any) => {
+        if (data?.chatRoomId) {
+          setTypingChatIds((prev) => ({ ...prev, [data.chatRoomId]: Boolean(data.isTyping) }));
+          setTimeout(() => {
+            setTypingChatIds((prev) => ({ ...prev, [data.chatRoomId]: false }));
+          }, 12000);
+        }
+      });
+      channel.bind("message-sent", (data: any) => {
+        if (data?.chatRoomId) {
+          setTypingChatIds((prev) => ({ ...prev, [data.chatRoomId]: false }));
+        }
+        onRefresh();
+      });
+      channel.bind("handover-changed", () => onRefresh());
       channel.bind("chat-read", (data: any) => {
         if (data?.chatRoomId && onMarkAsRead) {
           onMarkAsRead(data.chatRoomId);
@@ -235,7 +273,6 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
       });
       return () => {
         channel.unbind_all();
-        channel.unsubscribe();
       };
     }
   }, [onRefresh, selectedChatId, markAsRead, onMarkAsRead]);
@@ -331,6 +368,27 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
   };
 
   const renderMessageContent = (content: string) => {
+    if (
+      content === "[Image Attachment Uploaded]" ||
+      content === "[Bank Transfer Slip / Image Attachment Uploaded]"
+    ) {
+      return (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-950/50 border border-amber-500/40 text-xs">
+            <FileImage className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="font-bold text-amber-200 block">
+                Bank Transfer Slip / Image Uploaded
+              </span>
+              <span className="text-[10px] text-amber-300/80">
+                Awaiting Manual Staff Verification & Approval
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (content.startsWith("📎 [") && content.includes("]")) {
       const endBracket = content.indexOf("]");
       const attachInfo = content.slice(3, endBracket); // e.g. "PDF: invoice.pdf (124 KB)"
@@ -341,17 +399,43 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
       const isXls = attachInfo.startsWith("EXCEL:");
       const isDoc = attachInfo.startsWith("WORD:");
 
+      // Check if remainingText starts with a base64 image dataUrl
+      let embeddedDataUrl = "";
+      let captionText = remainingText;
+      if (remainingText.startsWith("data:image/")) {
+        const newlineIdx = remainingText.indexOf("\n");
+        if (newlineIdx !== -1) {
+          embeddedDataUrl = remainingText.slice(0, newlineIdx).trim();
+          captionText = remainingText.slice(newlineIdx + 1).trim();
+        } else {
+          embeddedDataUrl = remainingText.trim();
+          captionText = "";
+        }
+      }
+
       return (
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2 p-2.5 rounded-xl bg-black/30 border border-white/10 text-xs shadow-inner">
-            {isImg && <FileImage className="w-5 h-5 text-emerald-400 shrink-0" />}
-            {isPdf && <FileText className="w-5 h-5 text-rose-400 shrink-0" />}
-            {isXls && <FileSpreadsheet className="w-5 h-5 text-emerald-400 shrink-0" />}
-            {isDoc && <FileText className="w-5 h-5 text-blue-400 shrink-0" />}
-            {!isImg && !isPdf && !isXls && !isDoc && <Paperclip className="w-5 h-5 text-slate-300 shrink-0" />}
-            <span className="font-semibold text-white/95 truncate">{attachInfo}</span>
-          </div>
-          {remainingText && <p className="whitespace-pre-wrap leading-relaxed">{remainingText}</p>}
+        <div className="space-y-2">
+          {embeddedDataUrl ? (
+            <div className="rounded-xl overflow-hidden border border-white/15 bg-black/40">
+              <img
+                src={embeddedDataUrl}
+                alt="Uploaded WhatsApp Attachment"
+                className="max-h-64 w-auto object-contain rounded-lg mx-auto"
+              />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 p-2.5 rounded-xl bg-black/30 border border-white/10 text-xs shadow-inner">
+              {isImg && <FileImage className="w-5 h-5 text-emerald-400 shrink-0" />}
+              {isPdf && <FileText className="w-5 h-5 text-rose-400 shrink-0" />}
+              {isXls && <FileSpreadsheet className="w-5 h-5 text-emerald-400 shrink-0" />}
+              {isDoc && <FileText className="w-5 h-5 text-blue-400 shrink-0" />}
+              {!isImg && !isPdf && !isXls && !isDoc && (
+                <Paperclip className="w-5 h-5 text-slate-300 shrink-0" />
+              )}
+              <span className="font-semibold text-white/95 truncate">{attachInfo}</span>
+            </div>
+          )}
+          {captionText && <p className="whitespace-pre-wrap leading-relaxed">{captionText}</p>}
         </div>
       );
     }
@@ -853,6 +937,26 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                   </div>
                 );
               })}
+              {(Boolean(activeChat && typingChatIds[activeChat.id]) ||
+                replyText.trim().length > 0) && (
+                <div className="flex justify-end animate-fade-in">
+                  <div className="inline-flex items-center gap-2 rounded-2xl rounded-tr-none px-3.5 py-2 bg-[#005c4b]/90 border border-emerald-400/30 text-xs text-emerald-100 shadow-md">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+                    <span className="font-semibold italic">typing...</span>
+                    <span className="inline-flex items-center gap-1 ml-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-bounce" />
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-bounce"
+                        style={{ animationDelay: "150ms" }}
+                      />
+                      <span
+                        className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-bounce"
+                        style={{ animationDelay: "300ms" }}
+                      />
+                    </span>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} />
             </div>
 
@@ -1272,6 +1376,26 @@ export function WhatsAppChatView({ chats, onRefresh, onMarkAsRead }: WhatsAppCha
                     </div>
                   );
                 })}
+                {(Boolean(activeChat && typingChatIds[activeChat.id]) ||
+                  replyText.trim().length > 0) && (
+                  <div className="flex justify-end animate-fade-in">
+                    <div className="inline-flex items-center gap-2 rounded-2xl rounded-tr-none px-4 py-2.5 bg-[#005c4b]/90 border border-emerald-400/30 text-xs text-emerald-100 shadow-md">
+                      <Sparkles className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+                      <span className="font-semibold italic">typing...</span>
+                      <span className="inline-flex items-center gap-1 ml-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-bounce" />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-bounce"
+                          style={{ animationDelay: "150ms" }}
+                        />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-emerald-200 animate-bounce"
+                          style={{ animationDelay: "300ms" }}
+                        />
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 

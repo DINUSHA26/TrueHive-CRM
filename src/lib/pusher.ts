@@ -12,13 +12,18 @@ export const pusherServer =
       })
     : null;
 
+let pusherClientInstance: PusherClient | null = null;
+
 export function getPusherClient(): PusherClient | null {
   if (typeof window === "undefined") return null;
-  const key = process.env.NEXT_PUBLIC_PUSHER_KEY;
+  if (pusherClientInstance) return pusherClientInstance;
+
+  const key = process.env.NEXT_PUBLIC_PUSHER_KEY || "ee4125fcfe677b96bcd3";
+  const cluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "ap2";
   if (!key) return null;
-  return new PusherClient(key, {
-    cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "ap2",
-  });
+
+  pusherClientInstance = new PusherClient(key, { cluster });
+  return pusherClientInstance;
 }
 
 export const CHANNELS = {

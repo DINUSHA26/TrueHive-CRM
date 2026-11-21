@@ -28,7 +28,9 @@ export default function ChatsPage() {
     if (!silent) setIsRefreshing(true);
 
     try {
-      const res = await fetch("/api/crm?view=chats");
+      const res = await fetch(`/api/crm?view=chats&_t=${Date.now()}`, {
+        cache: "no-store",
+      });
       const data = await res.json();
       if (data.chats) {
         setChats(data.chats);
@@ -60,7 +62,7 @@ export default function ChatsPage() {
     fetchData(chats.length > 0);
     const interval = setInterval(() => {
       fetchData(true);
-    }, 5000);
+    }, 2500);
 
     try {
       const savedUser = localStorage.getItem("truehive_user");

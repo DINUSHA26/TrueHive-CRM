@@ -72,11 +72,11 @@ export default function TrueHiveWorkspace() {
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const [overRes, invRes, crmRes, ordRes, finRes] = await Promise.all([
-        fetch("/api/overview", { headers }).catch(() => null),
-        fetch("/api/inventory", { headers }).catch(() => null),
-        fetch("/api/crm", { headers }).catch(() => null),
-        fetch("/api/orders", { headers }).catch(() => null),
-        fetch("/api/finance", { headers }).catch(() => null),
+        fetch("/api/overview", { headers, cache: "no-store" }).catch(() => null),
+        fetch("/api/inventory", { headers, cache: "no-store" }).catch(() => null),
+        fetch(`/api/crm?_t=${Date.now()}`, { headers, cache: "no-store" }).catch(() => null),
+        fetch("/api/orders", { headers, cache: "no-store" }).catch(() => null),
+        fetch("/api/finance", { headers, cache: "no-store" }).catch(() => null),
       ]);
 
       if (overRes?.ok) {
