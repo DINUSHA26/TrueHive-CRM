@@ -95,8 +95,8 @@ const INITIAL_QUOTES: QuotationRecord[] = [
     clientEmail: "manidudinusha@gmail.com",
     clientAddress: "391/1A, Waiddy Mawatha, Pitipana North,",
     projectTitle: "Custom Polo Shirt Order",
-    projectDesc: "Fashion dora apparel custom set order with customized branding",
-    preparedBy: "Fashion dora",
+    projectDesc: "TrueHive apparel custom set order with customized branding",
+    preparedBy: "TrueHive",
     subtotal: 20000,
     discountPercent: 0,
     discountAmount: 0,
@@ -153,16 +153,16 @@ export function QuotationsView({
   // Lock body scroll when quotation preview or invoice modal is open
   useBodyScrollLock(Boolean(previewQuote || invoiceModalQuote));
 
-  // Company Details (Matching User's LKpos Print Header)
+  // Company Details (Default: TrueHive)
   const [companyInfo, setCompanyInfo] = useState({
-    name: "Fashion dora",
+    name: "TrueHive",
     address: "Bandaranayake Mawatha",
     email: "manisprout822@gmail.com",
     phone: "+94765731249",
     logoUrl: "/logo.png",
   });
 
-  // Quotation Form State
+  // Quotation Form State (with percentage or amount discount option)
   const [formData, setFormData] = useState({
     quoteNumber: "QT-1002",
     date: new Date().toISOString().split("T")[0],
@@ -173,8 +173,10 @@ export function QuotationsView({
     clientAddress: "",
     clientPhone: "",
     clientEmail: "",
-    preparedBy: "Fashion dora",
+    preparedBy: "TrueHive",
     notes: "",
+    discountType: "AMOUNT" as "AMOUNT" | "PERCENT",
+    discountPercent: 0,
     discountAmount: 0,
     taxPercent: 0,
     amountPaid: 0,
@@ -218,13 +220,35 @@ export function QuotationsView({
     try {
       const saved = localStorage.getItem("truehive_quotations");
       if (saved) {
-        setQuotations(JSON.parse(saved));
+        const parsed: QuotationRecord[] = JSON.parse(saved);
+        // Sanitize any legacy "Fashion dora" text from stored drafts
+        const cleaned = parsed.map((q) => ({
+          ...q,
+          preparedBy: (!q.preparedBy || q.preparedBy.toLowerCase() === "fashion dora") ? "TrueHive" : q.preparedBy,
+          projectDesc: q.projectDesc ? q.projectDesc.replace(/Fashion dora/gi, "TrueHive") : q.projectDesc,
+        }));
+        setQuotations(cleaned);
       }
     } catch {}
   };
 
   useEffect(() => {
     fetchQuotations();
+    try {
+      const savedSettings = localStorage.getItem("truehive_receipt_settings");
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        if (parsed.businessName && parsed.businessName.toLowerCase() !== "fashion dora") {
+          setCompanyInfo((prev) => ({
+            ...prev,
+            name: parsed.businessName,
+            address: parsed.address || prev.address,
+            phone: parsed.phone || prev.phone,
+            email: parsed.email || prev.email,
+          }));
+        }
+      }
+    } catch {}
   }, []);
 
   // Save to local storage whenever quotations change
@@ -272,9 +296,19 @@ export function QuotationsView({
       subtotal += rowTotal;
     });
 
-    const discountAmount = Number(formData.discountAmount) || 0;
+    let discountAmount = 0;
+    let discountPercent = 0;
+
+    if (formData.discountType === "PERCENT") {
+      discountPercent = Number(formData.discountPercent) || 0;
+      discountAmount = Math.round(subtotal * (discountPercent / 100) * 100) / 100;
+    } else {
+      discountAmount = Number(formData.discountAmount) || 0;
+      discountPercent = subtotal > 0 ? Math.round((discountAmount / subtotal) * 10000) / 100 : 0;
+    }
+
     const taxPercent = Number(formData.taxPercent) || 0;
-    const taxAmount = (subtotal - discountAmount) * (taxPercent / 100);
+    const taxAmount = Math.max(0, subtotal - discountAmount) * (taxPercent / 100);
     const finalAmount = Math.max(0, subtotal - discountAmount + taxAmount);
     const amountPaid = Number(formData.amountPaid) || 0;
     const balance = Math.max(0, finalAmount - amountPaid);
@@ -282,6 +316,8 @@ export function QuotationsView({
 
     return {
       subtotal: Math.round(subtotal * 100) / 100,
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      discountPercent,
       taxAmount: Math.round(taxAmount * 100) / 100,
       finalAmount: Math.round(finalAmount * 100) / 100,
       balance: Math.round(balance * 100) / 100,
@@ -301,8 +337,10 @@ export function QuotationsView({
       clientAddress: "",
       clientPhone: "",
       clientEmail: "",
-      preparedBy: companyInfo.name,
+      preparedBy: companyInfo.name || "TrueHive",
       notes: "",
+      discountType: "AMOUNT",
+      discountPercent: 0,
       discountAmount: 0,
       taxPercent: 0,
       amountPaid: 0,
@@ -325,6 +363,12 @@ export function QuotationsView({
 
   // Start Edit Quotation
   const handleOpenEdit = (quote: QuotationRecord) => {
+    const isPercent = Boolean(
+      quote.discountPercent &&
+      quote.discountPercent > 0 &&
+      (!quote.discountAmount ||
+        quote.discountAmount === Math.round((quote.subtotal * (quote.discountPercent / 100)) * 100) / 100)
+    );
     setFormData({
       quoteNumber: quote.quoteNumber,
       date: quote.date,
@@ -335,9 +379,11 @@ export function QuotationsView({
       clientAddress: quote.clientAddress || "",
       clientPhone: quote.clientPhone || "",
       clientEmail: quote.clientEmail || "",
-      preparedBy: quote.preparedBy || companyInfo.name,
+      preparedBy: quote.preparedBy || companyInfo.name || "TrueHive",
       notes: quote.notes || "",
-      discountAmount: quote.discountAmount,
+      discountType: isPercent ? "PERCENT" : "AMOUNT",
+      discountPercent: quote.discountPercent || 0,
+      discountAmount: quote.discountAmount || 0,
       taxPercent: quote.taxPercent || 0,
       amountPaid: quote.amountPaid,
       items: quote.items.map((it, idx) => ({
@@ -423,7 +469,8 @@ export function QuotationsView({
       preparedBy: formData.preparedBy,
       notes: formData.notes,
       subtotal: calculatedTotals.subtotal,
-      discountAmount: Number(formData.discountAmount) || 0,
+      discountPercent: calculatedTotals.discountPercent,
+      discountAmount: calculatedTotals.discountAmount,
       taxPercent: Number(formData.taxPercent) || 0,
       taxAmount: calculatedTotals.taxAmount,
       finalAmount: calculatedTotals.finalAmount,
@@ -951,7 +998,7 @@ export function QuotationsView({
                     type="text"
                     value={formData.preparedBy}
                     onChange={(e) => setFormData({ ...formData, preparedBy: e.target.value })}
-                    placeholder="Fashion dora"
+                    placeholder="TrueHive"
                     className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50"
                   />
                 </div>
@@ -1118,14 +1165,99 @@ export function QuotationsView({
               </div>
 
               <div className="flex items-center justify-between text-slate-300">
-                <span>Discount (Rs.):</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.discountAmount}
-                  onChange={(e) => setFormData({ ...formData, discountAmount: parseFloat(e.target.value) || 0 })}
-                  className="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-right text-white font-mono focus:outline-none focus:border-blue-500"
-                />
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">Discount:</span>
+                  <div className="inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5 text-[11px] font-bold">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const amt = calculatedTotals.discountAmount;
+                        setFormData((prev) => ({
+                          ...prev,
+                          discountType: "AMOUNT",
+                          discountAmount: amt,
+                        }));
+                      }}
+                      className={`px-2 py-0.5 rounded transition ${
+                        formData.discountType === "AMOUNT"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      Rs.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pct = calculatedTotals.discountPercent || (calculatedTotals.subtotal > 0 ? Math.round((calculatedTotals.discountAmount / calculatedTotals.subtotal) * 10000) / 100 : 0);
+                        setFormData((prev) => ({
+                          ...prev,
+                          discountType: "PERCENT",
+                          discountPercent: pct,
+                        }));
+                      }}
+                      className={`px-2 py-0.5 rounded transition ${
+                        formData.discountType === "PERCENT"
+                          ? "bg-blue-600 text-white shadow-sm"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      %
+                    </button>
+                  </div>
+                </div>
+
+                {formData.discountType === "PERCENT" ? (
+                  <div className="flex items-center gap-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="any"
+                        placeholder="0"
+                        value={formData.discountPercent === 0 ? "" : formData.discountPercent}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value) || 0;
+                          setFormData((prev) => ({
+                            ...prev,
+                            discountPercent: val,
+                          }));
+                        }}
+                        className="w-24 bg-slate-900 border border-slate-800 rounded-lg pl-2 pr-6 py-1 text-right text-white font-mono focus:outline-none focus:border-blue-500"
+                      />
+                      <span className="absolute right-2 top-1 text-slate-400 font-bold select-none">%</span>
+                    </div>
+                    {calculatedTotals.discountAmount > 0 && (
+                      <span className="text-[11px] text-emerald-400 font-mono font-bold whitespace-nowrap">
+                        (-Rs.{calculatedTotals.discountAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={formData.discountAmount === 0 ? "" : formData.discountAmount}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setFormData((prev) => ({
+                          ...prev,
+                          discountAmount: val,
+                        }));
+                      }}
+                      className="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-right text-white font-mono focus:outline-none focus:border-blue-500"
+                    />
+                    {calculatedTotals.discountPercent > 0 && (
+                      <span className="text-[11px] text-emerald-400 font-mono font-bold whitespace-nowrap">
+                        ({calculatedTotals.discountPercent}%)
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-slate-800 pt-2 flex items-center justify-between text-white font-bold text-sm">
@@ -1324,13 +1456,63 @@ export function QuotationsView({
                 </div>
               </div>
 
-              {/* Bordered Total Box */}
+              {/* Financial Totals Breakdown (Subtotal, Discount %, Tax, Total) */}
               <div className="flex justify-end pt-4">
-                <div className="border border-slate-900 rounded-lg px-6 py-2.5 min-w-[240px] flex items-center justify-between">
-                  <span className="font-bold text-sm tracking-wider">TOTAL:</span>
-                  <span className="font-bold text-sm">
-                    Rs.{previewQuote.finalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </span>
+                <div className="w-full sm:w-80 space-y-2 text-xs">
+                  <div className="flex justify-between text-slate-800 font-medium">
+                    <span>Sub Total:</span>
+                    <span className="font-mono font-bold text-slate-950">
+                      Rs.{previewQuote.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  {previewQuote.discountAmount > 0 && (
+                    <div className="flex justify-between text-rose-600 font-semibold border-t border-dotted border-slate-300 pt-1.5">
+                      <span>
+                        Discount {previewQuote.discountPercent && previewQuote.discountPercent > 0
+                          ? `(${previewQuote.discountPercent}%)`
+                          : previewQuote.subtotal > 0
+                          ? `(${Math.round((previewQuote.discountAmount / previewQuote.subtotal) * 10000) / 100}%)`
+                          : ""}:
+                      </span>
+                      <span className="font-mono font-bold">
+                        -Rs.{previewQuote.discountAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+
+                  {previewQuote.taxAmount && previewQuote.taxAmount > 0 && (
+                    <div className="flex justify-between text-slate-800 border-t border-dotted border-slate-300 pt-1.5">
+                      <span>Tax ({previewQuote.taxPercent}%):</span>
+                      <span className="font-mono font-bold text-slate-950">
+                        +Rs.{previewQuote.taxAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="border-2 border-slate-900 rounded-lg px-4 py-2 mt-2 flex items-center justify-between bg-slate-50/80 shadow-sm">
+                    <span className="font-bold text-sm tracking-wider uppercase text-slate-950">TOTAL:</span>
+                    <span className="font-bold text-sm sm:text-base font-mono text-slate-950">
+                      Rs.{previewQuote.finalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+
+                  {(previewQuote.amountPaid ?? 0) > 0 && (
+                    <div className="pt-1.5 space-y-1 text-[11px] border-t border-dotted border-slate-300">
+                      <div className="flex justify-between text-slate-700">
+                        <span>Amount Paid:</span>
+                        <span className="font-mono font-bold text-slate-950">
+                          Rs.{(previewQuote.amountPaid ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-slate-700 font-semibold">
+                        <span>Balance Due:</span>
+                        <span className="font-mono font-bold text-rose-600">
+                          Rs.{(previewQuote.balance ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1458,7 +1640,13 @@ export function QuotationsView({
 
                 {invoiceModalQuote.discountAmount > 0 && (
                   <div className="flex justify-between text-rose-600">
-                    <span>Discount :</span>
+                    <span>
+                      Discount {invoiceModalQuote.discountPercent && invoiceModalQuote.discountPercent > 0
+                        ? `(${invoiceModalQuote.discountPercent}%)`
+                        : invoiceModalQuote.subtotal > 0
+                        ? `(${Math.round((invoiceModalQuote.discountAmount / invoiceModalQuote.subtotal) * 10000) / 100}%)`
+                        : ""} :
+                    </span>
                     <span className="font-mono font-bold">
                       -Rs.{invoiceModalQuote.discountAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>

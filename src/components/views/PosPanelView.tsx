@@ -177,7 +177,7 @@ export function PosPanelView({
   const [recentOrders, setRecentOrders] = useState<OrderRecord[]>(initialOrders || []);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
-  const [businessName, setBusinessName] = useState("Fashion dora");
+  const [businessName, setBusinessName] = useState("TrueHive");
 
   // Lock body scroll when any POS modal is open
   useBodyScrollLock(Boolean(viewingInvoice || cameraModalOpen || receiptModalOpen));

@@ -268,7 +268,7 @@ export function ReceiptInvoiceSettingsModal({
                 value={settings.businessName}
                 onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white text-xs focus:border-blue-500 outline-none"
-                placeholder="TrueHive / Fashion Dora"
+                placeholder="TrueHive"
               />
             </div>
             <div>

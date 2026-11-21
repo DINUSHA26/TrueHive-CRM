@@ -1866,7 +1866,7 @@ export function EmployeeManagementView({
             >
               {/* Header */}
               <div className="text-center space-y-1 border-b border-slate-200 pb-4">
-                <h2 className="text-2xl font-black tracking-tight">Fashion dora</h2>
+                <h2 className="text-2xl font-black tracking-tight">TrueHive</h2>
                 <p className="text-xs text-slate-600">Bandaranayake Mawatha | Phone: +94765731249</p>
                 <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 mt-2">
                   MONTHLY ATTENDANCE REPORT
@@ -1949,7 +1949,7 @@ export function EmployeeManagementView({
             <div className="bg-white text-slate-950 p-4 sm:p-8 rounded-xl shadow-inner font-sans space-y-5 text-xs">
               {/* Header */}
               <div className="text-center space-y-1 border-b border-slate-200 pb-4">
-                <h2 className="text-2xl font-black tracking-tight">Fashion dora</h2>
+                <h2 className="text-2xl font-black tracking-tight">TrueHive</h2>
                 <p className="text-xs text-slate-600">Bandaranayake Mawatha | Phone: +94765731249</p>
                 <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-800 mt-2">
                   MONTHLY SALARY SHEET REPORT

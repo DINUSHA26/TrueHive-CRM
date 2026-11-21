@@ -11,7 +11,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-base font-semibold text-white mb-2">1. Overview</h2>
             <p>
-              This Privacy Policy explains how Fashion Dora / TrueHive (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) collects, uses, and protects customer information received through our official WhatsApp Business messaging platform, retail POS, and customer support channels.
+              This Privacy Policy explains how TrueHive (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) collects, uses, and protects customer information received through our official WhatsApp Business messaging platform, retail POS, and customer support channels.
             </p>
           </section>
 
